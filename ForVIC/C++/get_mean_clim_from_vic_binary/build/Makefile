@@ -12,7 +12,7 @@ MAKEFILE      = Makefile
 
 CC            = gcc
 CXX           = g++
-DEFINES       = -DQT_QML_DEBUG -DQT_CORE_LIB
+DEFINES       = -DTEST_DATA -DQT_QML_DEBUG -DQT_CORE_LIB
 CFLAGS        = -pipe -g -Wall -W -D_REENTRANT -fPIC $(DEFINES)
 CXXFLAGS      = -pipe -g -std=gnu++0x -Wall -W -D_REENTRANT -fPIC $(DEFINES)
 INCPATH       = -I../get_mean_clm -I. -I/home/liuming/dev/CropSyst/MicroBasin/util -I/home/liuming/dev/corn -I../../../../read_UI_metdata/readUINetCDF -I/home/liuming/Qt64bit/5.6/gcc_64/include -I/home/liuming/Qt64bit/5.6/gcc_64/include/QtCore -I. -I/home/liuming/Qt64bit/5.6/gcc_64/mkspecs/linux-g++
@@ -48,14 +48,14 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = ../get_mean_clm/main.cpp \
-		/home/liuming/dev/CropSyst/MicroBasin/util/esrigridclass.cpp \
+SOURCES       = /home/liuming/dev/CropSyst/MicroBasin/util/esrigridclass.cpp \
 		/home/liuming/dev/CropSyst/MicroBasin/util/pubtools.cpp \
-		../../../../read_UI_metdata/readUINetCDF/time_tools.cpp 
-OBJECTS       = main.o \
-		esrigridclass.o \
+		../../../../read_UI_metdata/readUINetCDF/time_tools.cpp \
+		../get_mean_clm/generate_mean_vic_bin_climate_data.cpp 
+OBJECTS       = esrigridclass.o \
 		pubtools.o \
-		time_tools.o
+		time_tools.o \
+		generate_mean_vic_bin_climate_data.o
 DIST          = /home/liuming/Qt64bit/5.6/gcc_64/mkspecs/features/spec_pre.prf \
 		/home/liuming/Qt64bit/5.6/gcc_64/mkspecs/common/unix.conf \
 		/home/liuming/Qt64bit/5.6/gcc_64/mkspecs/common/linux.conf \
@@ -155,10 +155,10 @@ DIST          = /home/liuming/Qt64bit/5.6/gcc_64/mkspecs/features/spec_pre.prf \
 		/home/liuming/Qt64bit/5.6/gcc_64/mkspecs/features/exceptions.prf \
 		/home/liuming/Qt64bit/5.6/gcc_64/mkspecs/features/yacc.prf \
 		/home/liuming/Qt64bit/5.6/gcc_64/mkspecs/features/lex.prf \
-		../get_mean_clm/get_mean_clm.pro  ../get_mean_clm/main.cpp \
-		/home/liuming/dev/CropSyst/MicroBasin/util/esrigridclass.cpp \
+		../get_mean_clm/get_mean_clm.pro  /home/liuming/dev/CropSyst/MicroBasin/util/esrigridclass.cpp \
 		/home/liuming/dev/CropSyst/MicroBasin/util/pubtools.cpp \
-		../../../../read_UI_metdata/readUINetCDF/time_tools.cpp
+		../../../../read_UI_metdata/readUINetCDF/time_tools.cpp \
+		../get_mean_clm/generate_mean_vic_bin_climate_data.cpp
 QMAKE_TARGET  = get_mean_clm
 DESTDIR       = 
 TARGET        = get_mean_clm
@@ -387,7 +387,7 @@ dist: distdir FORCE
 distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
-	$(COPY_FILE) --parents ../get_mean_clm/main.cpp /home/liuming/dev/CropSyst/MicroBasin/util/esrigridclass.cpp /home/liuming/dev/CropSyst/MicroBasin/util/pubtools.cpp ../../../../read_UI_metdata/readUINetCDF/time_tools.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents /home/liuming/dev/CropSyst/MicroBasin/util/esrigridclass.cpp /home/liuming/dev/CropSyst/MicroBasin/util/pubtools.cpp ../../../../read_UI_metdata/readUINetCDF/time_tools.cpp ../get_mean_clm/generate_mean_vic_bin_climate_data.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -424,11 +424,6 @@ compiler_clean:
 
 ####### Compile
 
-main.o: ../get_mean_clm/main.cpp /home/liuming/dev/CropSyst/MicroBasin/util/esrigridclass.h \
-		/home/liuming/dev/CropSyst/MicroBasin/util/pubtools.h \
-		/home/liuming/dev/corn/math/compare.hpp
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../get_mean_clm/main.cpp
-
 esrigridclass.o: /home/liuming/dev/CropSyst/MicroBasin/util/esrigridclass.cpp /home/liuming/dev/CropSyst/MicroBasin/util/esrigridclass.h \
 		/home/liuming/dev/CropSyst/MicroBasin/util/pubtools.h \
 		/home/liuming/dev/corn/math/compare.hpp
@@ -442,6 +437,13 @@ pubtools.o: /home/liuming/dev/CropSyst/MicroBasin/util/pubtools.cpp /home/liumin
 time_tools.o: ../../../../read_UI_metdata/readUINetCDF/time_tools.cpp ../../../../read_UI_metdata/readUINetCDF/UInetcdf_constants.h \
 		../../../../read_UI_metdata/readUINetCDF/time_tools.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o time_tools.o ../../../../read_UI_metdata/readUINetCDF/time_tools.cpp
+
+generate_mean_vic_bin_climate_data.o: ../get_mean_clm/generate_mean_vic_bin_climate_data.cpp /home/liuming/dev/CropSyst/MicroBasin/util/esrigridclass.h \
+		/home/liuming/dev/CropSyst/MicroBasin/util/pubtools.h \
+		/home/liuming/dev/corn/math/compare.hpp \
+		../../../../read_UI_metdata/readUINetCDF/time_tools.h \
+		../../../../read_UI_metdata/readUINetCDF/UInetcdf_constants.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o generate_mean_vic_bin_climate_data.o ../get_mean_clm/generate_mean_vic_bin_climate_data.cpp
 
 ####### Install
 

@@ -9,7 +9,7 @@ CONFIG -= app_bundle
 
 TEMPLATE = app
 
-DEFINES += HISTORICAL_MET xPRINT_DAILY_MET
+DEFINES += HISTORICAL_MET PRINT_DAILY_MET
 
 INCLUDEPATH += ../../Calculate_ReferenceET/cal_reference_ET \
                /home/liuming/dev/CropSyst/MicroBasin/util \
@@ -18,9 +18,9 @@ INCLUDEPATH += ../../Calculate_ReferenceET/cal_reference_ET \
 SOURCES += \
     time_tools.cpp \
     ../../Calculate_ReferenceET/cal_reference_ET/et_functions.cpp \
-    check_jc_climate_data.cpp \
     ../../../CropSyst/MicroBasin/util/esrigridclass.cpp \
-    ../../../CropSyst/MicroBasin/util/pubtools.cpp
+    ../../../CropSyst/MicroBasin/util/pubtools.cpp \
+    check_UI_historical_climate_data_new.cpp
 
 
 

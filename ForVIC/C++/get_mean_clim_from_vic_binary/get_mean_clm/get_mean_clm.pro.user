@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 3.6.1, 2018-02-28T12:16:30. -->
+<!-- Written by QtCreator 3.6.1, 2018-04-17T18:07:29. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -184,11 +184,11 @@
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.Qt4RunConfiguration:/home/liuming/dev/toolkits/ForVIC/C++/get_mean_clim_from_vic_binary/get_mean_clm/get_mean_clm.pro</value>
     <value type="bool" key="QmakeProjectManager.QmakeRunConfiguration.UseLibrarySearchPath">true</value>
-    <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.CommandLineArguments">vicidf1.asc 1986 2015 /home/liuming/dev/toolkits/ForVIC/C++/get_mean_clim_from_vic_binary/build /home/liuming/dev/toolkits/ForVIC/C++/get_mean_clim_from_vic_binary/build</value>
+    <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.CommandLineArguments">vicgridg.asc 1971 2000 /home/liuming/Projects/BPA/vic_input/Weather /home/liuming/Projects/BPA/vic_input/Weather_mean_1971_2000</value>
     <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.ProFile">get_mean_clm.pro</value>
     <value type="bool" key="Qt4ProjectManager.Qt4RunConfiguration.UseDyldImageSuffix">false</value>
     <value type="bool" key="Qt4ProjectManager.Qt4RunConfiguration.UseTerminal">false</value>
-    <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.UserWorkingDirectory"></value>
+    <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.UserWorkingDirectory">/home/liuming/Projects/BPA/vic_input/Weather_mean_1971_2000</value>
     <value type="uint" key="RunConfiguration.QmlDebugServerPort">3768</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
