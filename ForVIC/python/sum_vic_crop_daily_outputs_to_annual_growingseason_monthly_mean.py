@@ -42,7 +42,7 @@ loc_name_list = ["45.84375_-119.09375",
                  "45.53125_-119.65625"]
 """
 
-loc_name_list = ["46.21875_-118.84375"]
+loc_name_list = ["45.78125_-119.84375"]
 
 
 loc_crop_dic = {"45.84375_-119.09375" : "Potato", 
@@ -52,10 +52,10 @@ loc_crop_dic = {"45.84375_-119.09375" : "Potato",
                 "45.84375_-119.34375" : "Alfafa", 
                 "46.03125_-119.28125" : "SweetCorn",
                 "45.78125_-118.59375" : "Peas",
-                "45.78125_-119.84375" : "DryBeans",
-                "45.78125_-119.40625" : "Onion",
-                "45.90625_-119.71875" : "Canola",
-                "45.71875_-119.28125" : "Carrots",
+                "45.78125_-119.84375" : "Onion",
+                "45.78125_-119.40625" : "Canola",
+                "45.90625_-119.71875" : "Carrots",
+                "45.71875_-119.28125" : "DryBeans",
                 "45.28125_-119.78125" : "Barley",
                 "46.21875_-118.84375" : "Apple",
                 "45.71875_-119.34375" : "GrassSeed",
@@ -88,10 +88,15 @@ for loc_name in loc_name_list:
         multiyear_rotation = False
 
     target_var_list = ['Yield_kg_m2','irrig_netdemand_mm','irrig_total_mm','irrig_evap_mm','irrig_runoff_mm','water_stress_index','Runoff','Baseflow','Soil_E_mm','Crop_Canopy_E_mm','Act_Transp_mm','ET_mm','VIC_PET_shortgrass_mm','CropSyst_Pot_Transp_mm','PPT']
-    key_list = ['Year','CroppingSyst_code','Crop_code']
-    key_list_crop = ['Year','Crop_code']
-    key_list_annual = ['Year','CroppingSyst_code']
-    key_list_annual_crop = ['Year']
+    #key_list = ['Year','CroppingSyst_code','Crop_code']
+    key_list = ['cell_id','Year','Month','CroppingSyst_code','Crop_code']
+    key_list_month = ['cell_id','Year','Month','CroppingSyst_code']
+    key_list_grseason = ['cell_id','Year','CroppingSyst_code','Crop_code']
+    #key_list_crop = ['Year','Crop_code']
+    key_list_annual = ['cell_id','Year','CroppingSyst_code']
+    key_list_annual_crop = ['cell_id','Year']
+    key_crop = ['cell_id','CroppingSyst_code']
+    key_month_crop = ['cell_id','Month','CroppingSyst_code']
 
 
     all_var_list = key_list + target_var_list
@@ -106,8 +111,15 @@ for loc_name in loc_name_list:
             outrot="_"
             cropname = loc_crop_dic[loc_name]
             vic_crop_outputs = "crop_" + clm + "_" + rot + "_" + loc_name + ".asc"
-            output_annual_mean = "annual_mean_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
-            output_season_mean = "growseason_mean_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
+            
+            output_annual_mean = "Total_annual_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
+            output_season_mean = "Total_growseason_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
+            output_month_mean = "Total_month_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
+            avgoutput_annual_mean = "avg_Total_annual_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
+            avgoutput_season_mean = "avg_Total_growseason_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
+            avgoutput_month_mean = "avg_Total_monnth_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
+            
+            
             if multiyear_rotation:
                 output_annual_mean_allrot = "annual_mean_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + "_all_rot.asc" 
                 output_season_mean_allrot = "growseason_mean_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + "_all_rot.asc" 
@@ -115,24 +127,51 @@ for loc_name in loc_name_list:
             vic_crop = pd.read_csv(vic_crop_outputs,sep=',',index_col=False)
             #print(key_list)
             temp = vic_crop[all_var_list]
-            temp = temp.loc[temp['Year'] >= start_year]
-            vic_select = temp.loc[ ( temp['Crop_code'] != 0 ) & ( temp['Year'] >= start_year) ]
+            temp = temp.loc[temp['Year'] >= start_year]                                                                         #all revords after start_year
+            vic_select = temp.loc[ ( temp['Crop_code'] != 0 ) & ( temp['Year'] >= start_year) ]                                 #growing season for annual crops
             #vic_select = temp.loc[temp['Year'] >= start_year]
             #vic_select = vic_select.drop('Crop_code', 1)
     
-            vic_growth_season = vic_select.groupby(key_list,as_index=False)[all_var_list].sum()
-            if multiyear_rotation:
-                vic_growth_season_allrot = vic_growth_season.groupby(key_list_crop,as_index=False)[all_var_list].mean()
-                vic_growth_season_allrot = vic_growth_season_allrot.drop('CroppingSyst_code', 1)
-                vic_growth_season_allrot.to_csv(output_season_mean_allrot, index=False)
+            vic_month = vic_select.groupby(key_list_month,as_index=False)[all_var_list].sum()
+            vic_month_out = vic_month.drop('Crop_code', 1)
+            vic_month_out.to_csv(output_month_mean, index=False)
+     
+    
+            vic_growth_season = vic_select.groupby(key_list_grseason,as_index=False)[all_var_list].sum()
+            #if multiyear_rotation:
+            #    vic_growth_season_allrot = vic_growth_season.groupby(key_list_crop,as_index=False)[all_var_list].mean()
+            #    vic_growth_season_allrot = vic_growth_season_allrot.drop('Crop_code', 1)
+            #    vic_growth_season_allrot.to_csv(output_season_mean_allrot, index=False)
                 #vic_growth_season = vic_growth_season.drop('Crop_code', 1)
-            else:
-                vic_growth_season.to_csv(output_season_mean, index=False)
+            #else:
+            
+            vic_growth_season_out = vic_growth_season.drop("Month", 1)
+            vic_growth_season_out.to_csv(output_season_mean, index=False)
+                
+            
             vic_annual = temp.groupby(key_list_annual,as_index=False)[all_var_list].sum()
-            if multiyear_rotation:
-                vic_annual_allrot = vic_annual.groupby(key_list_annual_crop,as_index=False)[all_var_list].mean()
-                vic_annual = vic_annual.drop('Crop_code', 1)
-                vic_annual_allrot.to_csv(output_annual_mean_allrot, index=False)
-            else:
-                vic_annual.to_csv(output_annual_mean, index=False)
+            #if multiyear_rotation:
+            #    vic_annual_allrot = vic_annual.groupby(key_list_annual_crop,as_index=False)[all_var_list].mean()
+            #    vic_annual = vic_annual.drop('Crop_code', 1)
+            #    vic_annual_allrot.to_csv(output_annual_mean_allrot, index=False)
+            #else:
+            vic_annual_out = vic_annual.drop("Month", 1)
+            vic_annual_out.to_csv(output_annual_mean, index=False)
+                
+                
+            avg_month = vic_month.groupby(key_month_crop,as_index=False)[all_var_list].mean()
+            avg_month = avg_month.drop("Year", 1)
+            avg_month = avg_month.drop("Crop_code", 1)
+            avg_month.to_csv(avgoutput_month_mean, index=False)
+            
+            avg_season = vic_growth_season.groupby(key_crop,as_index=False)[all_var_list].mean()
+            avg_season = avg_season.drop("Year", 1)
+            avg_season = avg_season.drop("Crop_code", 1)
+            avg_season.to_csv(avgoutput_season_mean, index=False)
+            
+            avg_year = vic_annual.groupby(key_crop,as_index=False)[all_var_list].mean()
+            avg_year = avg_year.drop("Year", 1)
+            avg_year = avg_year.drop("Crop_code", 1)
+            avg_year.to_csv(avgoutput_annual_mean, index=False)
+            
 print("Done!")
