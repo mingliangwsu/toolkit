@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Nov 26, 2018 LIU 
-Convert crop fractions into VIC veg parametger files for running VIC-CropSyst V2 (Forecast project)
+Created on Thu July 12, LIU
+Convert crop fractions into VIC veg and irrigation parametger files
 @author: liuming
 """
 

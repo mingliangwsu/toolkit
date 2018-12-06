@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     lat.readAsciiGridFile("lat.asc");
     lon.readAsciiGridFile("lon.asc");
 
-    FILE *outfile = fopen("/home/liuming/temp/conus_tree_fruit.txt","w");
+    FILE *outfile = fopen("conus_tree_fruit.txt","w");
 
     fprintf(outfile,"lat,lon,cellid,stateid,apple,pears,walnut\n");
 

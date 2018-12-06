@@ -18,7 +18,7 @@ rot_list = ['norotation']
 
 #User output
 #outdir = "/home/liuming/Projects/BioEarth/VIC-CropSyst/Simulation/Scenarios/BPA_Umatilla/VIC_output"
-start_year = 1986
+start_year = 1979
 outdir = "/home/liuming/Projects/WSU_BPA/VIC-CropSyst/Simulation/Scenario/Testruns/Output"
 
 """

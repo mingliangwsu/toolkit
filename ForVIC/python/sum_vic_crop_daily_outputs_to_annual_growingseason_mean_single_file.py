@@ -24,9 +24,9 @@ start_year = 1915
 #User output
 #outdir = "/home/liuming/Projects/BioEarth/VIC-CropSyst/Simulation/Scenarios/BPA_Umatilla/VIC_output"
 #outdir = "/home/liuming/Projects/WSU_BPA/VIC-CropSyst/Simulation/Scenario/Testruns/Output_180617_crops18"
-outdir = "/home/liuming/Projects/WSU_BPA/VIC-CropSyst/Simulation/Scenario/Testruns/Output"
+#outdir = "/home/liuming/Projects/WSU_BPA/VIC-CropSyst/Simulation/Scenario/Testruns/Output"
 #outdir = "/home/liuming/Projects/WSU_BPA/VIC-CropSyst/Simulation/Scenario/Testruns/Output_local_180617_Alfalfa"
-
+outdir = "/home/liuming/Projects/WSU_BPA/VIC-CropSyst/Simulation/Scenario/Testruns/evaluate_shallow_soil_and_mechanical_irrigation"
 """
 loc_name_list = ["45.84375_-119.09375", 
                  "45.78125_-118.46875", 
@@ -52,9 +52,20 @@ loc_name_list = ["45.84375_-119.09375",
 """
 
 
-loc_name_list = ["46.21875_-118.84375"]
+loc_name_list = ["shallow_SS_",
+                 "shallow_FL_",
+                 "shallow_DR_",
+                 "shallow_CP_",
+                 "shallow_BG_",
+                 "predfined_shallow_SS_",
+                 "predfined_shallow_FL_",
+                 "predfined_shallow_DR_",
+                 "predfined_shallow_CP_",
+                 "predfined_shallow_BG_",
+                 "deep_"]
 
 
+"""
 loc_crop_dic = {"45.84375_-119.09375" : "Potato", 
                 "45.78125_-118.46875" : "WinWheat", 
                 "45.71875_-119.59375" : "SprWheat", 
@@ -75,8 +86,9 @@ loc_crop_dic = {"45.84375_-119.09375" : "Potato",
                 "45.53125_-119.65625" : "Camelina",
                 
                 "46.15625_-119.09375" : "MixedCrops",
-                "46.15625_-119.09375" : "MixedCrops"}
-
+                "46.15625_-119.09375" : "MixedCrops",
+                "45.09375_-120.21875" : "MixedCrops"}
+"""
 #loc_name = "45.84375_-119.09375"
 #loc_name = "45.78125_-118.46875"
 #loc_name = "45.71875_-119.59375"
@@ -99,7 +111,7 @@ print("Irrigation:" + irrigation)
 avg_annual_out = irrigation + "all_annual_avg.txt"
 avg_month_out = irrigation + "all_month_avg.txt"
 
-print(len(loc_name_list))
+#print(len(loc_name_list))
 
 for loc_name in loc_name_list:
     #multiyear_rotation = True
@@ -131,16 +143,24 @@ for loc_name in loc_name_list:
             #vic_crop_outputs = "crop4001_cp_45.84375_-119.09375.asc"
             #vic_crop_outputs = "crop_Livneh_norotation_45.84375_-119.09375.asc"
             outrot="_"
-            cropname = loc_crop_dic[loc_name]
-            vic_crop_outputs = irrigation + "crop_" + clm + "_" + rot + "_" + loc_name + ".asc"
+            cropname = "corn"
+            #loc_name = "shallow_SS_"
+            
+            #datapath = "/home/liuming/Projects/WSU_BPA/VIC-CropSyst/Simulation/Scenario/Testruns/evaluate_shallow_soil_and_mechanical_irrigation/" 
+            vic_crop_outputs = loc_name + "crop_Livneh_norotation_44.96875_-119.21875.asc"
+            
+            
+            
+            
+            
             print(vic_crop_outputs)
             
             output_annual_mean = irrigation + "Total_annual_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
             output_season_mean = irrigation + "Total_growseason_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
-            output_month_mean = irrigation + "Total_month_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
+            #output_month_mean = irrigation + "Total_month_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
             avgoutput_annual_mean = irrigation + "avg_Total_annual_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
             avgoutput_season_mean = irrigation + "avg_Total_growseason_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
-            avgoutput_month_mean = irrigation + "avg_Total_monnth_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
+            #avgoutput_month_mean = irrigation + "avg_Total_monnth_" + clm + "_" + outrot + "_" + cropname + "_" + loc_name + ".asc" 
 
             
             if multiyear_rotation:
@@ -149,16 +169,17 @@ for loc_name in loc_name_list:
 
             vic_crop = pd.read_csv(vic_crop_outputs,sep=',',index_col=False)
             #print(key_list)
-            temp = vic_crop[all_var_list + ['Crop_code']]
+            temp = vic_crop[all_var_list + ['Crop_code'] + ['Grow_Stage']]
             temp = temp.loc[temp['Year'] >= start_year]                                                                         #all revords after start_year
-            vic_select = temp[ ( temp['Crop_code'] != 0 ) & ( temp['Year'] >= start_year) ]                                 #growing season for annual crops
+            vic_select = temp[ ( temp['Crop_code'] != 0 ) & (temp['Grow_Stage'].str.contains('Dormant') == False) & ( temp['Year'] >= start_year) ]                                 #growing season for annual crops
             
-            vic_select = temp.loc[temp['Year'] >= start_year]
+            #vic_select = temp.loc[temp['Year'] >= start_year]
             vic_select = vic_select.drop('Crop_code', 1)
-            vic_select = temp
-            vic_month = vic_select.groupby(key_list_month,as_index=False)[all_var_list].sum()
-            vic_month_out = vic_month  #vic_month.drop('Crop_code', 1)
-            vic_month_out.to_csv(output_month_mean, index=False)
+            vic_select = vic_select.drop('Grow_Stage', 1)
+            #vic_select = temp
+            #vic_month = vic_select.groupby(key_list_month,as_index=False)[all_var_list].sum()
+            #vic_month_out = vic_month  #vic_month.drop('Crop_code', 1)
+            #vic_month_out.to_csv(output_month_mean, index=False)
      
     
             vic_growth_season = vic_select.groupby(key_list_grseason,as_index=False)[all_var_list].sum()
@@ -170,6 +191,7 @@ for loc_name in loc_name_list:
             #else:
             
             vic_growth_season_out = vic_growth_season.drop("Month", 1)
+            vic_growth_season_out["loc"] = loc_name
             vic_growth_season_out.to_csv(output_season_mean, index=False)
                 
             
@@ -180,17 +202,19 @@ for loc_name in loc_name_list:
             #    vic_annual_allrot.to_csv(output_annual_mean_allrot, index=False)
             #else:
             vic_annual_out = vic_annual.drop("Month", 1)
+            vic_annual_out["loc"] = loc_name
             vic_annual_out.to_csv(output_annual_mean, index=False)
                 
                 
-            avg_month = vic_month.groupby(key_month_crop,as_index=False)[all_var_list].mean()
-            avg_month = avg_month.drop("Year", 1)
-            avg_month = avg_month.drop("Crop_code", 1)
-            avg_month['CROP'] = cropname
-            avg_month.to_csv(avgoutput_month_mean, index=False)
+            #avg_month = vic_month.groupby(key_month_crop,as_index=False)[all_var_list].mean()
+            #avg_month = avg_month.drop("Year", 1)
+            #avg_month = avg_month.drop("Crop_code", 1)
+            #avg_month['CROP'] = cropname
+            #avg_month.to_csv(avgoutput_month_mean, index=False)
             
             avg_season = vic_growth_season.groupby(key_crop,as_index=False)[all_var_list].mean()
             avg_season = avg_season.drop("Year", 1)
+            avg_season["loc"] = loc_name
             #avg_season = avg_season.drop("Crop_code", 1)
             avg_season.to_csv(avgoutput_season_mean, index=False)
             
@@ -198,18 +222,19 @@ for loc_name in loc_name_list:
             avg_year = avg_year.drop("Year", 1)
             #avg_year = avg_year.drop("Crop_code", 1)
             avg_year['CROP'] = cropname
+            avg_year["loc"] = loc_name
             avg_year.to_csv(avgoutput_annual_mean, index=False)
             if avg_annual_all.empty:
                 avg_annual_all = avg_year
             else:
                 avg_annual_all = avg_annual_all.append(avg_year, ignore_index=True)
                 
-            if avg_month_all.empty:
-                avg_month_all = avg_month
-            else:
-                avg_month_all = avg_month_all.append(avg_month, ignore_index=True)
+            #if avg_month_all.empty:
+            #    avg_month_all = avg_month
+            #else:
+            #    avg_month_all = avg_month_all.append(avg_month, ignore_index=True)
 
             
-avg_month_all.to_csv(avg_month_out, index=False, float_format='%.3f')
+#avg_month_all.to_csv(avg_month_out, index=False, float_format='%.3f')
 avg_annual_all.to_csv(avg_annual_out, index=False, float_format='%.3f')
 print("Done!")

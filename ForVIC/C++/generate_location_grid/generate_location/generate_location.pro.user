@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 3.6.1, 2018-03-02T11:08:23. -->
+<!-- Written by QtCreator 3.6.1, 2018-08-27T08:48:48. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -304,11 +304,11 @@
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.Qt4RunConfiguration:/home/liuming/dev/toolkits/ForVIC/C++/generate_location_grid/generate_location/generate_location.pro</value>
     <value type="bool" key="QmakeProjectManager.QmakeRunConfiguration.UseLibrarySearchPath">true</value>
-    <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.CommandLineArguments">/mnt/nas2/Projects/users/liuming/b0001ap.asc conuslon.asc conuslat.asc</value>
+    <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.CommandLineArguments">cellid.asc lon.asc lat.asc</value>
     <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.ProFile">generate_location.pro</value>
     <value type="bool" key="Qt4ProjectManager.Qt4RunConfiguration.UseDyldImageSuffix">false</value>
     <value type="bool" key="Qt4ProjectManager.Qt4RunConfiguration.UseTerminal">false</value>
-    <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.UserWorkingDirectory">/home/liuming/temp</value>
+    <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.UserWorkingDirectory">/home/liuming/temp/conus_tree_fruit</value>
     <value type="uint" key="RunConfiguration.QmlDebugServerPort">3768</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
