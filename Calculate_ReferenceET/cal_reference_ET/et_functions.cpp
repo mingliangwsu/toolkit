@@ -57,15 +57,16 @@ double calc_NetRad(const double ER, const double Rs, const double ea,
     return Rns - Rnl;                                                            //(MJ/m2/day)
 }
 //______________________________________________________________________________
-double calc_AeroRes(const double Uz, const double z)
+double calc_AeroRes(const double Uz, const double z, const double crop_height)
 {   //Uz: (m/s) z: (m) screen hight
+    //CropHeight (m) 0.12m for short grass 0.5m for Alfalfa
     double U2 = 0;
     if (is_approximately<double>(z, 2)) U2 = Uz;
     else U2 = Uz * (4.87 / (log(67.8 * z - 5.42)));
     U2 = U2 * 86400.0;                                                           //Convert to m/day
-    const double d = 0.08;
-    const double zom = 0.01476;
-    const double zoh = 0.001476;
+    const double d = crop_height * 0.667;                                         //0.08;
+    const double zom = crop_height * 0.123;                                      //0.01476;
+    const double zoh = crop_height * 0.0123;                                     //0.001476;
     const double zm = 2.0;
     const double zh = 2.0;
     const double VK = 0.41;
@@ -120,11 +121,14 @@ double calc_RHtoDP(const double Tair, const double RH)
 }
 //______________________________________________________________________________
 double calc_referenceET_PM(const double lat, const double altitude,
-  const double screen_height, const int DOY, double tmax, double tmin,
+  const double screen_height, const double crop_height, const double canopy_resistance,
+  const int DOY, double tmax, double tmin,
   double rs, double rhmax, double rhmin, double uz,
   double &et_aero_term, double &et_rad_term)
 {   //lat: (degree); screen_height: (m); tmax, tmin: (°C); rs: (MJ/m2/day)
     //rhmax, rhmin: (%); uz: (m/s)
+    //canopy_resistance 70s/m for short grass  45s/m for alfalfa
+    //crop_height 0.12 for short grass  0.5 for alfalfa
     if (tmax < tmin)   std::swap<double>(tmax,tmin);
     if (rhmax < rhmin) std::swap<double>(rhmax,rhmin);
     if (uz < 0) uz = 0;
@@ -136,8 +140,8 @@ double calc_referenceET_PM(const double lat, const double altitude,
     double delta    = calc_DT(Tmean, esTmean);
     double lambda   = calc_Lambda(Tmean);
     double gamma    = calc_Gamma(lambda,altitude);
-    double rc       = 70.0 / 86400.0;                                            //(day/m)
-    double ra       = calc_AeroRes(uz, screen_height);                           //(day/m)
+    double rc       = canopy_resistance / 86400.0;                                            //(day/m)
+    double ra       = calc_AeroRes(uz, screen_height, crop_height);                           //(day/m)
     double ea       = calc_VP(esTmax, esTmin, rhmax, rhmin);
     double vpd      = calc_VPD(esTmax, esTmin, ea);
     et_aero_term = calc_ETAeroTerm(delta, gamma, lambda, rc, ra, vpd,
@@ -149,10 +153,13 @@ double calc_referenceET_PM(const double lat, const double altitude,
 }
 //______________________________________________________________________________
 double calc_referenceET_PT(const double lat, const double altitude,
-  const double screen_height, const int DOY, double tmax, double tmin,
+  const double screen_height, const double crop_height, const double canopy_resistance,
+  const int DOY, double tmax, double tmin,
   double rs, double rhmax, double rhmin, double uz)                              //Priestley Taylor
 {   //lat: (degree); screen_height: (m); tmax, tmin: (°C); rs: (MJ/m2/day)
     //rhmax, rhmin: (%); uz: (m/s)
+    //canopy_resistance 70s/m for short grass  45s/m for alfalfa
+
     const double alpha = 1.26;
     if (tmax < tmin)   std::swap<double>(tmax,tmin);
     if (rhmax < rhmin) std::swap<double>(rhmax,rhmin);
@@ -165,8 +172,8 @@ double calc_referenceET_PT(const double lat, const double altitude,
     double delta    = calc_DT(Tmean, esTmean);
     double lambda   = calc_Lambda(Tmean);
     double gamma    = calc_Gamma(lambda,altitude);
-    double rc       = 70.0 / 86400.0;                                            //(day/m)
-    double ra       = calc_AeroRes(uz, screen_height);                           //(day/m)
+    double rc       = canopy_resistance / 86400.0;                                            //(day/m)
+    double ra       = calc_AeroRes(uz, screen_height, crop_height);                           //(day/m)
     double ea       = calc_VP(esTmax, esTmin, rhmax, rhmin);
     double er       = calc_PotRad(lat, DOY);
     double rn       = calc_NetRad(er, rs, ea, tmax, tmin);
