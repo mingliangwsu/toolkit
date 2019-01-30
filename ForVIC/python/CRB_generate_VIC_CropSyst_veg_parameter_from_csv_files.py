@@ -180,7 +180,7 @@ wsda_to_vic_dic = {
                     "Cabbage Seed": "8506",
                     "Caneberry": "107",
                     "Canola": "4101",
-                    "Cantaloupe": "8202",
+                    "Cantaloupe": "8002",
                     "Carrot": "4102",
                     "Carrot Seed": "8507",
                     "Cauliflower": "8811",
@@ -503,13 +503,15 @@ for cell in cdl_frac:
                 else:
                     cdl_natveg += cdl_frac[cell][crop]
         #if ((wsda_crop >= 0.5 * cdl_crop) and (wsda_crop > MIN_FRACTION)):
-        if cell in wsda_valid_list and cell in wsda_frac:
+        #if cell in wsda_valid_list and cell in wsda_frac:
+        if cell in wsda_valid_list:
             #use crop area from wsda_crop
             print(cell + " use WSDA")
             fout_log.write(cell + " use WSDA")
-            for crop in wsda_frac[cell]:
-                if crop != "total":
-                    final_data[cell][crop] = wsda_frac[cell][crop]
+            if cell in wsda_frac:
+                for crop in wsda_frac[cell]:
+                    if crop != "total":
+                        final_data[cell][crop] = wsda_frac[cell][crop]
             adj = 1.0
             if ((cdl_natveg > (1.0 - wsda_crop)) and (cdl_natveg > MIN_FRACTION)):
                 adj = (1.0 - wsda_crop) / cdl_natveg;
