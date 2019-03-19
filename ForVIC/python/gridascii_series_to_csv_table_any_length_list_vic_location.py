@@ -18,21 +18,13 @@ vicidfile = asciidir + '/vicid.asc'
 outfile = '/home/liuming/temp/temp/CA_Landuse.csv'
 """
 
-#USA CDL
-#asciidir = '/mnt/hydronas/Projects/BPA_CRB/GIS/CDL2017/lufraction_vicid'
-#vicidfile = asciidir + '/vicid.asc'
-#outfile = '/home/liuming/temp/temp/USCDL_Landuse.csv'
-
-#Klamath
-#asciidir = '/mnt/hydronas/Projects/BPA_CRB/GIS/CDL2017_Klamath/lufraction_vicid'
-#vicidfile = asciidir + '/vicid.asc'
-#outfile = '/home/liuming/temp/temp/Klamath_Landuse.csv'
+if len(sys.argv) <= 1:
+    print("Usage:" + sys.argv[0] + "<ID> <out> <list...>\n")
+    sys.exit(0)
 
 #PNW_Klamath
-asciidir = '/mnt/hydronas/Projects/BPA_CRB/GIS/CDL_2017_pnwkla/ascii'
-vicidfile = '/mnt/hydronas/Projects/BPA_CRB/GIS/CDL_2017_pnwkla' + '/vicid.asc'
-outfile = '/home/liuming/temp/temp/PNWKlamath_Landuse.csv'
-
+vicidfile = sys.argv[1]
+outfile = sys.argv[2]
 
 #read vicid
 vicid = dict()
@@ -53,8 +45,9 @@ print('read vic id done')
 
 #data = dict()
 lulist = list()
-for lu in range(0,300):
-    filename = asciidir + '/cdl' + str(lu) + '.asc'
+varnums = len(sys.argv)
+for lu in range(3,varnums):
+    filename = sys.argv[lu]
     if os.path.exists(filename):
         lulist.append(lu)
         row = 0
@@ -81,9 +74,14 @@ for cell in sorted(enddata):
     line = cell
     totalarea = 0
     for lu in range(0,len(lulist)):
-        line += ',' + enddata[cell][lu]
+        data = float(enddata[cell][lu])
+        if data < 0:
+            data = -1 * (int((abs(data)-0.0625/2)/0.0625)*0.0625+0.0625/2)
+        else:
+            data = int((abs(data)-0.0625/2)/0.0625)*0.0625+0.0625/2
+        line += ',' + str(data)
         totalarea += float(enddata[cell][lu])
-    if totalarea > 0.000001:
-        outfile_table.write(line + '\n')
+    #if totalarea > 0.000001:
+    outfile_table.write(line + '\n')
 outfile_table.close()
 print("Done!")

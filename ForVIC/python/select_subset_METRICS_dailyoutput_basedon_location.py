@@ -10,14 +10,25 @@ import pandas as pd
 import sys 
 import os
 
-if len(sys.argv) != 5:
-    print("Usage:" + sys.argv[0] + "<original_big_file> <x> <y> <out_new_file>\n")
+if len(sys.argv) == 0:
+    print("Usage:" + sys.argv[0] + "<original_big_file> <xmin> <ymin> <xmax> <ymax> <out_new_file>\n")
     sys.exit(0)
 
 orig_file = sys.argv[1]
-x = float(sys.argv[2])
-y = float(sys.argv[3])
-new_file = sys.argv[4]
+xmin = float(sys.argv[2])
+ymin = float(sys.argv[3])
+xmax = float(sys.argv[4])
+ymax = float(sys.argv[5])
+new_file = sys.argv[6]
+
+if xmin > xmax:
+    t = xmin
+    xmin = xmax
+    xmax = t
+if ymin > ymax:
+    t = ymin
+    ymin = ymax
+    ymax = t
 
 outfile_soil = open(new_file,"w")
 
@@ -27,10 +38,10 @@ with open(orig_file) as f:
     for line in f:
         #cell = line.rstrip()
         cell = line.split()
-        if "row" in cell:
+        if "x" in cell:
             outfile_soil.write(line)
         else:
-            if abs(float(cell[2]) - x) <= 15 and abs(float(cell[3]) - y) <= 15:
+            if float(cell[0]) >= xmin and float(cell[0]) <= xmax and float(cell[1]) >= ymin and float(cell[1]) <= ymax:
                 outfile_soil.write(line)
 outfile_soil.close()
 print("Getting subset done!")
