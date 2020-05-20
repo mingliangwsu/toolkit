@@ -15,10 +15,16 @@ def sortkey(x):
     return int(x)
 
 ref_sites_file = "/home/liuming/mnt/hydronas1/Projects/UW_subcontract/Calibration/refsites_55.txt"
-ref_data = "/home/liuming/mnt/hydronas1/Projects/UW_subcontract/Calibration/dv/dv.txt" #USGS	 12010000	1981-05-12	230	A	230	A
-outdata_path = "/home/liuming/mnt/hydronas1/Projects/UW_subcontract/Calibration/dv/Refsites/"
+#ref_data = "/home/liuming/mnt/hydronas1/Projects/UW_subcontract/Calibration/dv/dv.txt" #USGS	 12010000	1981-05-12	230	A	230	A
+#outdata_path = "/home/liuming/mnt/hydronas1/Projects/UW_subcontract/Calibration/dv/Refsites/"
+#out_site_info = "/home/liuming/mnt/hydronas1/Projects/UW_subcontract/Calibration/refsites_withdata_info.txt"
 
-out_site_info = "/home/liuming/mnt/hydronas1/Projects/UW_subcontract/Calibration/refsites_withdata_info.txt"
+ref_data = "/home/liuming/mnt/hydronas1/Projects/UW_subcontract/Calibration/dv_1902_2020/dv.txt" #USGS	 12010000	1981-05-12	230	A	230	A
+outdata_path = "/home/liuming/mnt/hydronas1/Projects/UW_subcontract/Calibration/dv_1902_2020/Refsites/"
+out_site_info = "/home/liuming/mnt/hydronas1/Projects/UW_subcontract/Calibration/refsites_withdata_info_1902_2020.txt"
+
+
+
 ref_sites = list()
 data_sites_dates = dict()
 foutdic = dict()

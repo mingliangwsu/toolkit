@@ -152,6 +152,9 @@ for region in regions:
         if grid in crop_sum_fraction:
             newcropcount = len(crop_fraction[grid])
             newcropfraction = crop_sum_fraction[grid]
+        if newcropfraction > 1.0:
+            print(grid + ":newcropfraction > 1" + " : " + str(newcropfraction)) 
+            newcropfraction = 1.0
           
         cropnum = 0
         cropfraction = 0
@@ -162,6 +165,10 @@ for region in regions:
         if cropnum > 0:
             totvegcount = len(vicveg_veg_parameter[grid]) - cropnum + newcropcount
             totnat_fraction = vicveg_veg_totfraction[grid] - cropfraction
+            if totnat_fraction < 0:
+                print(grid + ":totnat_fraction < 0" + " : " + str(totnat_fraction))
+            if totnat_fraction > 1:
+                print(grid + ":totnat_fraction > 1" + " : " + str(totnat_fraction))    
         else:
             totvegcount = len(vicveg_veg_parameter[grid]) + newcropcount
             totnat_fraction = vicveg_veg_totfraction[grid]
@@ -171,6 +178,22 @@ for region in regions:
         if newcropfraction > (1.0 - totnat_fraction):
             if totnat_fraction >= 0.00001:
                 adj = (1.0 - newcropfraction) / totnat_fraction
+                if adj < 0:
+                    print(grid + ":adj < 0" + " : " + str(adj))
+        #handle small fraction of natural vegetation
+        remove_veg_list = list()
+        for vegid in sorted(vicveg_veg_parameter[grid], key=sortkey, reverse=False):
+            if vegid not in croptype:
+                newvegf = adj * vicveg_veg_fraction[grid][vegid]
+                if newvegf < 0.00001:
+                    totvegcount -= 1
+                    remove_veg_list.append(vegid)
+                    #print(grid + " veg:" + vegid + " f:" + str(newvegf) + " < 0.00001")
+        for veg in remove_veg_list:
+            if veg in vicveg_veg_parameter[grid]:
+                del vicveg_veg_parameter[grid][veg]
+        #end handle small fraction
+                
         fout_veg.write(grid + " " + str(totvegcount) + "\n")
         for vegid in sorted(vicveg_veg_parameter[grid], key=sortkey, reverse=False):
             if vegid not in croptype:

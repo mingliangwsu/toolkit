@@ -401,9 +401,14 @@ for region in regions:
     for grid in sorted(vicveg_veg_parameter, key=sortkey, reverse=False):
         newcropcount = 0
         newcropfraction = 0.0
+        adj_crop = 1.0
         if grid in crop_sum_fraction:
             newcropcount = len(crop_fraction[grid])
             newcropfraction = crop_sum_fraction[grid]
+        if newcropfraction > 1.0:
+            print(grid + ":newcropfraction > 1" + " : " + str(newcropfraction)) 
+            adj_crop = 1.0 / newcropfraction 
+            newcropfraction = 1.0
         cropnum = 0
         cropfraction = 0
         for crop in croptype:
@@ -422,6 +427,23 @@ for region in regions:
         if newcropfraction > (1.0 - totnat_fraction):
             if totnat_fraction >= 0.00001:
                 adj = (1.0 - newcropfraction) / totnat_fraction
+                if adj < 0:
+                    print(grid + ":adj < 0" + " : " + str(adj))
+        
+        #handle small fraction of natural vegetation
+        remove_veg_list = list()
+        for vegid in sorted(vicveg_veg_parameter[grid], key=sortkey, reverse=False):
+            if vegid not in croptype:
+                newvegf = adj * vicveg_veg_fraction[grid][vegid]
+                if newvegf < 0.00001:
+                    totvegcount -= 1
+                    remove_veg_list.append(vegid)
+                    #print(grid + " veg:" + vegid + " f:" + str(newvegf) + " < 0.00001")
+        for veg in remove_veg_list:
+            if veg in vicveg_veg_parameter[grid]:
+                del vicveg_veg_parameter[grid][veg]
+        #end handle small fraction                
+                
         fout_veg.write(grid + " " + str(totvegcount) + "\n")
         for vegid in sorted(vicveg_veg_parameter[grid], key=sortkey, reverse=False):
             if vegid not in croptype:
@@ -430,7 +452,7 @@ for region in regions:
                 fout_veg.write(vicveg_veg_lai[grid][vegid])
         if grid in crop_fraction:
             for crop in sorted(crop_fraction[grid], key=sortkey, reverse=False):
-                fout_veg.write("   " + crop + " " + str('%.5f' % crop_fraction[grid][crop]) + " " + default_veg_parameter + "\n")
+                fout_veg.write("   " + crop + " " + str('%.5f' % (crop_fraction[grid][crop] * adj_crop)) + " " + default_veg_parameter + "\n")
                 if croptype[0] in vicveg_veg_lai[grid]:
                     fout_veg.write(vicveg_veg_lai[grid][croptype[0]])
                 elif croptype[1] in vicveg_veg_lai[grid]:
