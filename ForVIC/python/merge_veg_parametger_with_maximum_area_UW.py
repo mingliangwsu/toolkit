@@ -39,17 +39,17 @@ default_irrig_parameter_for_vineyard = "IrrigTP_Sub_surf_drip_perfect_eliminate_
 vinecrops = ["2001","2002","2098", "2504"]
 
 #get cell list
-allcell = list()
-with open(celllist) as f:
-    for line in f:
-        a = line.split()
-        if len(a) > 0:
-            cellid = int(a[0])
-            #print(cellid)
-            if cellid not in allcell:
-                allcell.append(cellid)
-                #print(str(cellid) + " added")
-print("Finish reading cell.\n")
+#allcell = list()
+#with open(celllist) as f:
+#    for line in f:
+#        a = line.split()
+#        if len(a) > 0:
+#            cellid = int(a[0])
+#            #print(cellid)
+#            if cellid not in allcell:
+#                allcell.append(cellid)
+#                #print(str(cellid) + " added")
+#print("Finish reading cell.\n")
 
 
 

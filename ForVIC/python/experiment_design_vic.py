@@ -21,15 +21,15 @@ from pyDOE import *
 #Ds = np.array([0.0001,1.0])
 #Ws = np.array([0.01,1.0])
 
-outfilename = "/home/liuming/temp/UW/parameter_list.txt"
+outfilename = "/home/liuming/temp/UW/parameter_list_40.txt"
 
-fnumsample = 20
-factors = 4
+fnumsample = 40
+factors = 5
 
-actor_ranges = np.array([[0.001,0.4],[0.01,30],[0.0001,1.0],[0.01,1.0]])
-factor_name = np.array(["bi","DsMAX","Ds","Ws"])
+actor_ranges = np.array([[0.001,0.4],[0.01,30],[0.0001,1.0],[0.01,1.0],[0.001,3]])
+factor_name = np.array(["bi","DsMAX","Ds","Ws","D2"])
 
-experiments = lhs(4, samples=numsample, criterion='center')
+experiments = lhs(5, samples=fnumsample, criterion='center')
 
 outfile = open(outfilename, "w")
 
