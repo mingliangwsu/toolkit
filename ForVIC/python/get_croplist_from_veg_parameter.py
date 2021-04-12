@@ -15,9 +15,10 @@ import numpy as np
 def sortkey(x): 
     return int(x)
 
-datapath = "/home/liuming/mnt/hydronas1/Projects/Forecast2020/irrigation/"
-veg_file = datapath + "pnw_veg_parameter_filledzero.txt"
-outlist_file = datapath + "allcroplist.txt"
+#datapath = "/home/liuming/mnt/hydronas1/Projects/Forecast2020/irrigation/"
+datapath = "/home/liuming/mnt/hydronas1/Projects/Forecast2020/Parameters_for_Linux_site_testrun/parameters/Database/Veg/"
+veg_file = datapath + "pnw_veg_parameter_filledzero_state_reclassified.txt"
+outlist_file = datapath + "allcroplist_state.txt"
 
 
 croplist = list()

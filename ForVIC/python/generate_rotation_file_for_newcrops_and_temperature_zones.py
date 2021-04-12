@@ -47,10 +47,10 @@ management_file_dict = {
     "2418" : "AutoIrrigHarvest_onions",     #"Onion_bulb_warmer",
     "2421" : "AutoIrrigHarvest_Grass",      #"Sod_seed_grass_colder",
     "2422" : "AutoIrrigHarvest_Grass",      #"Sod_seed_grass_warmer",
-    "701" : "AutoIrrigHarvest_Alfalfa",     #"Alfalfa_Hay",
-    "708" : "AutoIrrigHarvest_Clover",      #"CloverHay",
-    "713" : "AutoIrrigHarvest_Grass",       #"GrassHay",
-    "807" : "AutoIrrigHarvest_mint",        #"Mint",
+    "701"  : "AutoIrrigHarvest_Alfalfa",     #"Alfalfa_Hay",
+    "708"  : "AutoIrrigHarvest_Clover",      #"CloverHay",
+    "713"  : "AutoIrrigHarvest_Grass",       #"GrassHay",
+    "807"  : "AutoIrrigHarvest_mint",        #"Mint",
     "1814" : "AutoIrrigHarvest_sweet_corn", #"Corn_Sweet",
 }
 default_management = "AutoIrrigHarvest_annual"
@@ -85,10 +85,10 @@ new_crops = {  #new crops need various planting dates
     "2427" : "Winter_wheat_colder",
     "2428" : "Winter_wheat_warmer",
     
-    "701" : "Alfalfa_Hay",
-    "708" : "CloverHay",
-    "713" : "GrassHay",
-    "807" : "Mint",
+    "701"  : "Alfalfa_Hay",
+    "708"  : "CloverHay",
+    "713"  : "GrassHay",
+    "807"  : "Mint",
     "1814" : "Corn_Sweet",
     "1824" : "Pea_Dry",
     "1839" : "Radish"
@@ -139,8 +139,8 @@ with open(rotation_crop_state_info) as f:
             pdate_key = find_plant_dic_key(planting_date_dic,a[3])
             pdate = "0" + planting_date_dic[pdate_key][a[2]]
             cropfilename = crop_parameter_path + a[3] + ".crp"
-            if a[3] in management_file_dict:
-                management = management_file_dict[a[3]]
+            if a[1] in management_file_dict:
+                management = management_file_dict[a[1]]
             else:
                 management = default_management
             management_filename = management_path + management + ".mgt"
