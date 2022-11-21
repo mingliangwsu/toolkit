@@ -20,33 +20,24 @@ from mpl_toolkits import mplot3d
 #datafile_dir = "/home/liuming/mnt/hydronas2/Projects/FireEarth/Cedar/Outputs"
 #pre = "spinup_fire__"
 
-#datafile_dir = "/home/liuming/mnt/hydronas1/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/liudebug_output_debug"
-datafile_dir = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/liudebug_output_debug"
-
-#datafile_dir = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/liudebug_init"
+datafile_dir = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/liudebug_output"
 #datafile_dir = "/home/liuming/mnt/hydronas1/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/outputs_fromzero_vegc_20X200"
 #outfig_app = "zero_soil_restart"
-#pre = "liutest_output_fire_1990_"
+pre = "liutest_output_fire_1990_"
 #pre = "from_initial_soil_"
-
-#pre = "liutest_output_fire_1990_"
-pre = "liutest_output_fire_1990_initveg_"
-
-#pre = "init_veg_"
 outfig_app = "fig_" + pre
 
 #files = ["basin.daily","grow_basin.daily","stratum.daily","grow_stratum.daily"
-#         ,"grow_patch.daily","grow_stratum.yearly","basin.yearly","patch.daily","grow_basin.yearly"]
-files = ["basin.daily","grow_stratum.daily","grow_stratum.yearly"]
+#         ,"grow_patch.daily","grow_stratum.yearly","basin.yearly","patch.daily"]
+files = ['basin.yearly']
 #ndeps = ["0.001","0.0025", "0.005", "0.0075", "0.01"]
 ndeps = ["0.0025"]
 for filen in files:
   for ndep in ndeps:
-    #print(filen + ": ndep " + ndep)
+    print(filen + ": ndep " + ndep)
     #pre = "dep_" + ndep + "_" 
     outfig_app = "fig_" + pre
     filename = pre + filen
-    ofilename = filename
 #filename = pre + "basin.daily"
 #Index(['day', 'month', 'year', 'basinID', 'pot_surface_infil', 'snow_thr',
 #       'sat_def_z', 'sat_def', 'rz_storage', 'unsat_stor', 'rz_drainage',
@@ -154,41 +145,39 @@ for filen in files:
 
 
 
-    #strata = 79708
-    stratas = [179708,79708]
-    plotstrata = False
-    plotted_once = False
-    
-    for strata in stratas:
-      spf = pf
-      if 'stratumID' in pf:
-        plotstrata = True
+    strata = 79708
+    spf = pf
+    if 'stratumID' in pf:
         spf = pf[pf["stratumID"] == strata]
-        ofilename = filename + "_" + str(strata)
-      #spf = spf[(spf.syr >= 0) & (spf.syr <= 100)]
-      #spf = spf[(spf.index.values >= 65000) & (spf.index.values <= 80000)]
+    #spf = spf[(spf.index.values >= 50000) & (spf.index.values <= 55000)]
+#spf = spf[(spf.index.values >= 100) & (spf.index.values <= 200)]
+#spf = spf[(spf.index.values >= 390000) & (spf.index.values <= 400000)]
 #spf = spf[(spf.index.values >= 150000) & (spf.index.values <= 152500)]
 #spf = spf[(spf.index.values >= 795000) & (spf.index.values <= 800000)]
 #spf = spf[(spf.year == 1982) | (spf.year == 1987)]
 #spf.to_csv(datafile_dir + "/subsetnew1982_87.csv")
 
-      no_plot = ['day', 'month', 'year', 'basinID', 'hillID', 'zoneID', 'patchID',
+    no_plot = ['day', 'month', 'year', 'basinID', 'hillID', 'zoneID', 'patchID',
            'stratumID', 'vegID']
+    
+    #plotvars = ['sat_def_z', 'sat_def', 'rz_storage', 'unsat_stor', 'rz_drainage','unsat_drain','streamflow','baseflow']
+    plotvars = ['lai','streamflow','et']
 
-
-      #ax.plot(pf["year"], pf["lai"])
-      for col in pf.columns:
-        if col not in no_plot and (plotstrata or ((not plotstrata) and (not plotted_once))):
+    #ax.plot(pf["year"], pf["lai"])
+    #for col in pf.columns:
+    for col in plotvars:
+        if col not in no_plot:
             fig, ax = plt.subplots(figsize=(20,8))
             ax.plot(spf.index.values,spf[col])
             ax.title.set_text(col)
+            '''
             if "outputs_fromzero_vegc_20X200" in datafile_dir:
-                fig.savefig(datafile_dir + "/" + ofilename + "_" + col + "_outputs_fromzero_vegc_20X200" + ".png")
+                fig.savefig(datafile_dir + "/" + filename + "_" + col + "_outputs_fromzero_vegc_20X200" + ".png")
             else:
-                fig.savefig(datafile_dir + "/" + outfig_app + "_" + ofilename + "_" + col + ".png")
+                fig.savefig(datafile_dir + "/" + outfig_app + "_" + filename + "_" + col + ".png")
+            
             plt.close(fig)
-      plotted_once = True
-        
+            '''
     
     
     #ax.title(col)

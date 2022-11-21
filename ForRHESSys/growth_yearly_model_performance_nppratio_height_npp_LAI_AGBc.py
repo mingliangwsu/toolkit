@@ -19,7 +19,7 @@ import scipy.stats
 #from scipy.ndimage.filters import gaussian_filter1d
 
 if len(sys.argv) <= 1:
-    print("Usage:" + sys.argv[0] + "<growth_year_file> <valid_start_year> <valid_end_year> <valid_veg_id> <patch_stratum_vegid_file> <target1> <target_stddev1> ... <outdist_file>\n")
+    print("Usage:" + sys.argv[0] + "<growth_year_file> <valid_start_year> <valid_end_year> <valid_veg_id> <patch_stratum_vegid_file> <target1> <target_stddev1> ... <outdist_file> <out_record_file>\n")
     sys.exit(0)
     
 #target0:npp/gpp ratio  
@@ -28,8 +28,11 @@ if len(sys.argv) <= 1:
 #target3:LAI  (m2/m2)
 #target4:ABGc  (kgC)
     
-numtargets =  int((len(sys.argv) - 6) / 2)
-#print("numtargets :" + str(numtargets))   
+numtargets =  int((len(sys.argv) - 8) / 2)
+outdist = sys.argv[len(sys.argv)-2]
+outrecords = sys.argv[len(sys.argv)-1]
+outflog = open(outrecords, "a")
+outflog.write("numtargets :" + str(numtargets) + "\n")   
 #print(sys.argv)
  
 growth_year = sys.argv[1] 
@@ -51,7 +54,8 @@ for t in range(numtargets):
     #print("targets :" + str(t) + " target:" + str(target[t]) + " std_dev:" + str(target_stddev[t]))   
     
 # = 0.5
-outdist = sys.argv[len(sys.argv)-1] 
+
+
 #"/home/liuming/mnt/hydronas2/Projects/FireEarth/Cedar/Outputs/dist_npp_gpp_ratio.txt"
 
 
@@ -83,7 +87,8 @@ for t in range(numtargets):
     
     dist[t] = scipy.stats.norm.pdf(avg[t],loc=target[t],scale=target_stddev[t])
     tdist = tdist * dist[t]
-    print("targets:" + str(t) + " avg:" + str(avg[t]) + " target_value:" + str(target[t]) + " std_dev:" + str(target_stddev[t]) + " dist:" + str(dist[t]) + " tdist:" + str(tdist))
+    #print("targets:" + str(t) + " avg:" + str(avg[t]) + " target_value:" + str(target[t]) + " std_dev:" + str(target_stddev[t]) + " dist:" + str(dist[t]) + " tdist:" + str(tdist))
+    outflog.write("targets:" + str(t) + " avg:" + str('%.4f' % avg[t]) + " target_value:" + str('%.4f' % target[t]) + " std_dev:" + str('%.4f' % target_stddev[t]) + " dist:" + str('%.4f' % dist[t]) + " tdist:" + str('%.4f' % tdist) + "\n")   
 
 with open(outdist, 'w') as fh:
     #fh.write(str('%.12f' % tdist) + '\n')

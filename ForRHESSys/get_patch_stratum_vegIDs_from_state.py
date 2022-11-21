@@ -23,8 +23,10 @@ def sortkey(x):
 #outpatch_vegid_file = outpath + "/patch_vegID2.txt"
 #outpatch_vegid_file = outpath + "/patch_vegID2_04272022.txt"
 
-state_file_name = "/home/liuming/mnt/hydronas2/Projects/FireEarth/Cedar/cedar_world_final_fire.txt"
-outpath = "/home/liuming/mnt/hydronas2/Projects/FireEarth/Cedar"
+#state_file_name = "/home/liuming/mnt/hydronas2/Projects/FireEarth/Cedar/cedar_world_final_fire.txt"
+#outpath = "/home/liuming/mnt/hydronas2/Projects/FireEarth/Cedar"
+state_file_name = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/br_veg_spun_and_stable.state"
+outpath = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979"
 outpatch_vegid_file = outpath + "/patch_stratum_vegid.txt"
 
 
