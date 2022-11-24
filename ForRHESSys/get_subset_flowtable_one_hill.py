@@ -53,61 +53,17 @@ with open(in_file) as f,open(out_file,'w') as fout:
           #print("0 tnew:",tnew)
           if len(a) == 1:
               out = "1\n"
+              fout.write(out)
           elif len(a) == 2:
               if a[0] == selected:
                   find = True
                   out = line
+                  fout.write(out)
+              else:
+                  find = False
           elif len(a) > 2:
-              if a[2] == selected:
+              if find:
                   out = line
-        if out != "":
-                    #print(out)
-            fout.write(out)
-          #print("2 torig:",torig)
-          #print("2 tnew:",tnew)
-"""                
-            if a[0] == sys.argv[3]:
-                fout.write(line)
-        if ("num_basins" in a) and inlevel == 1:
-            if numlevels["basin_ID"] == 1:
-                out = "1" + whitespace + "num_basins" + "\n"
-            else:
-                out = line
-            fout.write(out)
-        if "basin_ID" in a:
-            inlevel = 2
-            if a[0] == sys.argv[4]:
-                fout.write(line)
-        if inlevel == 2:
-            if "num_hillslopes" not in a:
-                fout.write(line)
-            else:
-                if numlevels["hillslope_ID"] == 1:
-                    out = "   1" + whitespace + "num_hillslopes" + "\n"
-                else:
-                    out = line
-                fout.write(out)
-        if "hillslope_ID" in a:
-            inlevel = 3
-            
-                
-                
-        if "patch_ID" in a:
-            patch = a[0]
-            if patch not in patch_vegID_lib:
-                patch_vegID_lib[patch] = dict()
-        if "canopy_strata_ID" in a:                                                    #85393 patch_ID
-            strata = a[0]
-        if "veg_parm_ID" in a:                                                 #5 veg_parm_ID
-            veg = a[0]
-            if strata not in patch_vegID_lib[patch]:
-                patch_vegID_lib[patch][strata] = veg
-
-with open(outpatch_vegid_file,'w') as fout:
-    fout.write("patch_ID,strata_ID,veg_parm_ID\n")
-    for patch in sorted(patch_vegID_lib, key=sortkey, reverse=False):
-        for strata in sorted(patch_vegID_lib[patch], key=sortkey, reverse=False):
-            fout.write(str(patch) + ',' + strata + ',' + patch_vegID_lib[patch][strata] + '\n')
-"""            
+                  fout.write(out)
 print("Done!")                    
         

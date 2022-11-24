@@ -41,8 +41,17 @@ def objective(item):
     + " -svalt " + str(po) + " " + str(pa) + " -gw " + str(gw1) + " " + str(gw2) + " -snowmelt_tcoef " + str(snowmelt_tcoef) \
     + " -r " + flowtable + " -g -b " + " -firespread 100 " + patchgrid + " " + demgrid \
     + " -Ndecayrate 3.0 -firespin " + str(spyrs) + " " + str(spins) 
+    
+    """
+    runRHESSys = RHESSys + " -netcdfgrid -ncgridinterp 10 -t " + tecfile + " -w " + worldfile \
+    + " -whdr " + headfile + " -st " + str(sim_startyear) + " 01 01 01 -ed " + str(sim_endyear) + " 12 31 24 -pre " \
+    + local_pre + " -s " + str(s1) + " " + str(s2) + " -sv " + str(s1) + " " + str(s2) \
+    + " -svalt " + str(po) + " " + str(pa) + " -gw " + str(gw1) + " " + str(gw2) + " -snowmelt_tcoef " + str(snowmelt_tcoef) \
+    + " -g -b " + " -firespread 100 " + patchgrid + " " + demgrid \
+    + " -Ndecayrate 3.0 -firespin " + str(spyrs) + " " + str(spins) 
+    """
 
-    #print(runRHESSys)
+    print(runRHESSys)
     os.system(runRHESSys)
 
     #calculate model performance
@@ -58,8 +67,12 @@ def objective(item):
     
     out = str(idx) + "," + str(s1) + "," + str(s2) + "," + str(po) + "," + str(pa) + "," + str(gw1) + "," + str(gw2) + "," + str(snowmelt_tcoef) + "," + evaluation_timestep \
     + "," + str(cal_nse_value) + "," + str(evl_nse_value) + "\n"
-
+    
+    fname_cal_evl_result = outputdir + "/" + "cal_evl_nse_" + str(idx) + ".txt"
+    outf = open(fname_cal_evl_result,"w")
+    outf.write("idx,s1,s2,po,pa,gw1,gw2,snowmelt_tcoef,period,nse_cal,nse_evl\n")
     outf.write(out)
+    outf.close
     idx += 1
     return -cal_nse_value
              
@@ -69,15 +82,20 @@ def objective(item):
 cwd = os.getcwd()
 RHESSys="/home/liuming/RHESSys_Ning/RHESSys/build/Qt/gcc/Release/RHESSys"
 droot="/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979"
-RHESSys_outputdir="/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/Output_calibrations"
+RHESSys_outputdir="/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/Output_calibrations/hydrology"
 if not os.path.exists(RHESSys_outputdir):
     command_line = "mkdir -p " + RHESSys_outputdir  
     os.system(command_line)
 os.chdir(droot)
 
 
-flowtable = droot + "/" + "patch_29586.flow"
-worldfile = droot + "/" + "patch_29586.state"
+#flowtable = droot + "/cal-brw/" + "cal-brw.flow"
+#worldfile = droot + "/cal-brw/" + "cal-brw.state.Y2016M1D1H1.state.Y2015M1D1H1.state.Y1985M1D1H1.state"
+
+flowtable = droot + "/hill336.flow"
+worldfile = droot + "/hill336.state"
+
+
 tecfile = droot + "/" + "calibration.tec"
 headfile =  droot + "/" + "br_with_fire.hdr"
 output_pre = RHESSys_outputdir + "/calib"
@@ -85,10 +103,10 @@ patchgrid = droot + "/" + "../../../../auxdata/patchgrid.txt"
 demgrid = droot + "/" + "../../../../auxdata/demgrid.txt"
 sim_startyear = 1980
 sim_endyear = 2017
-spyrs = 2
+spyrs = 10
 #soil_spins=50
 #veg_spins=20 #25
-spins = 1
+spins = 2
 
 #${RHESSys} -netcdfgrid -ncgridinterp 10 -t ${tecfile} -w ${worldfile} -whdr br_with_fire.hdr -start_from_zero_vegpools -st 1980 01 01 01 -ed ${endyear} 12 31 24 -pre ${output_pre} -s ${s1} ${s2} -sv ${s1} ${s2} -svalt ${po} ${pa} -gw ${gw1} ${gw2} -r ${flowtable} -g -b -p -c -firespread 100 ../../../../auxdata/patchgrid.txt ../../../../auxdata/demgrid.txt -Ndecayrate 3.0 -firespin ${spyrs} ${veg_spins} 
 
@@ -96,7 +114,7 @@ spins = 1
 calibration_method = "differential_evolution"   #"differential_evolution" "dual_annealing" "minimize"
 outputdir = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/Output_calibrations_results"
 #unit is mm/day??
-fname_basin_daily_out = output_pre + "_basin.daily"
+#fname_basin_daily_out = output_pre + "_basin.daily"
 #unit is m,/day??
 fname_obs = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/calibration/brw_obs_str.csv"
 fname_cal_evl_result = outputdir + "/" + "cal_evl_nse.txt"
@@ -108,8 +126,9 @@ evaluation_timestep = "monthly"
 
 obsdata = pd.read_csv(fname_obs,delimiter=",",header=0)
 
-outf = open(fname_cal_evl_result,"w")
-outf.write("idx,s1,s2,po,pa,gw1,gw2,snowmelt_tcoef,period,nse_cal,nse_evl\n")
+#outf = open(fname_cal_evl_result,"w")
+#outf.write("idx,s1,s2,po,pa,gw1,gw2,snowmelt_tcoef,period,nse_cal,nse_evl\n")
+#outf.close()
 
 #target_period = ["cal","evl"]
 
@@ -153,11 +172,12 @@ elif calibration_method == "dual_annealing":
     #dual_annealing method
     result = dual_annealing(objective,[[0,1],[0,1],[0,1],[0,1],[0,1],[0,1]],maxiter=50,maxfun=50,no_local_search=True)
 elif calibration_method == "differential_evolution":
-    result = differential_evolution(objective,[(0,1),(0,1),(0,1),(0,1),(0,1),(0,1)],maxiter=3,popsize=3,tol=1e-3,atol=1e-2)
+    result = differential_evolution(objective,[(0,1),(0,1),(0,1),(0,1),(0,1),(0,1)],maxiter=4,popsize=10,tol=1e-3,atol=1e-2,workers=2)
 
 print(result)
-outf.write(str(result))
 
+outf = open(fname_cal_evl_result,"w")
+outf.write(str(result))
 outf.close()
 
 os.chdir(cwd)

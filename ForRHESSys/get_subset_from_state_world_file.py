@@ -6,11 +6,7 @@ get strata veg ID (two stratas) for each patch from state file
 @author: liuming
 """
 
-import numpy as np
-import pandas as pd
 import sys 
-import os
-import math
 
 def sortkey(x): 
     return int(x)
@@ -31,13 +27,12 @@ def match_y_to_x(x,y):
 #outpatch_vegid_file = outpath + "/patch_vegID2.txt"
 #outpatch_vegid_file = outpath + "/patch_vegID2_04272022.txt"
     
-import sys 
-import random
-import copy
 
 if len(sys.argv) <= 1:
     print("Usage:" + sys.argv[0] + "<1world_state_filename> <2out_subset> <3world_id> <4basin_ID> <5hillslope_ID> <6zone_ID> <7patch_ID> <8canopy_strata_ID>\n")
     sys.exit(0)
+
+print(sys.argv[1])
 
 levels = {"world_id" : 0,
           "basin_ID" : 0,
