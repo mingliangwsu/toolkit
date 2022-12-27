@@ -21,7 +21,7 @@ from mpl_toolkits import mplot3d
 #pre = "spinup_fire__"
 
 #datafile_dir = "/home/liuming/mnt/hydronas1/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/liudebug_output_debug"
-datafile_dir = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/liudebug_output_debug"
+datafile_dir = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/Output_calibrations/hydrology"
 
 #datafile_dir = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/liudebug_init"
 #datafile_dir = "/home/liuming/mnt/hydronas1/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/outputs_fromzero_vegc_20X200"
@@ -30,14 +30,14 @@ datafile_dir = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios
 #pre = "from_initial_soil_"
 
 #pre = "liutest_output_fire_1990_"
-pre = "liutest_output_fire_1990_initveg_"
+pre = "eval_brw_"
 
 #pre = "init_veg_"
 outfig_app = "fig_" + pre
 
 #files = ["basin.daily","grow_basin.daily","stratum.daily","grow_stratum.daily"
 #         ,"grow_patch.daily","grow_stratum.yearly","basin.yearly","patch.daily","grow_basin.yearly"]
-files = ["basin.daily","grow_stratum.daily","grow_stratum.yearly"]
+files = ["basin.daily"]
 #ndeps = ["0.001","0.0025", "0.005", "0.0075", "0.01"]
 ndeps = ["0.0025"]
 for filen in files:

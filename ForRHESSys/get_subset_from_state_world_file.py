@@ -34,7 +34,7 @@ if len(sys.argv) <= 1:
 
 print(sys.argv[1])
 
-levels = {"world_id" : 0,
+levels = {"world_ID" : 0,
           "basin_ID" : 0,
           "hillslope_ID" : 0,
           "zone_ID" : 0,
@@ -53,7 +53,7 @@ numlevels = {"num_basins" : 0,
 
 
 if len(sys.argv) >= 4:
-    levels["world_id"] = 1
+    levels["world_ID"] = 1
 if len(sys.argv) >= 5:
     levels["basin_ID"] = 1
     numlevels["num_basins"] = 1
@@ -97,7 +97,7 @@ with open(state_file) as f,open(out_file,'w') as fout:
           #print("line:",line)
           #print("0 torig:",torig)
           #print("0 tnew:",tnew)
-          if "world_id" in a:
+          if "world" in line:
               t = len(torig) - 0;
               for i in range(t):
                   torig.pop()
@@ -131,6 +131,10 @@ with open(state_file) as f,open(out_file,'w') as fout:
                   torig.pop()
               torig.append(a[0])  
           #print("1 torig:",torig)  
+          #print("target:")
+          #print(target)
+          #print("torig")
+          #print(torig)
           if (match_y_to_x(target,torig)):
                 #tnew = torig[:]
                 if (a[1] not in nums):

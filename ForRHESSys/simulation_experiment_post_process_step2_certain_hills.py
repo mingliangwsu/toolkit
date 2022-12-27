@@ -107,7 +107,8 @@ if not os.path.isdir(outpath):
 #                "month_hill_lai_fluxes " : "year_month_hillID_veg0_from_out_patch.monthly_simid_",
 #                "month_hill_plant ": "year_month_hillID_veg_parm_ID_from_out_stratum.monthly_simid_"}
 
-target_files = {"month_hill_lai_fluxes " : "year_month_hillID_veg0_from_out_patch.monthly_simid_"}
+target_files = {"year_hill_pool" : "year_hillID_veg0_from_out_grow_patch.yearly_simid_"}
+hills = [310,356,370]
 
 data = dict()
 #Time series data
@@ -132,6 +133,9 @@ target_vars = {"plant_c" : "kgC/m2",
                "height" : "m"}
 
 for target in target_files:
+  lw = 0
+  for hill in hills:
+    lw += 1
     data[target] = pd.DataFrame()
     for index, row in sims.iterrows():
         #print(row)
@@ -146,7 +150,7 @@ for target in target_files:
                 data[target] = t.copy()
             else:
                 data[target] = data[target].append(t)
-    data[target] = data[target][(data[target]['year'] <= 2017) & (data[target]['year_aftb'] >= -5) & (data[target]["year_aftb"] <= 15)]    
+    data[target] = data[target][(data[target]['year'] <= 2017) & (data[target]['year_aftb'] >= -5) & (data[target]["year_aftb"] <= 15) & (data[target]["hillID"] == hill)]    
 
     if "veg_parm_ID" in data[target].columns:
         data[target] = data[target].rename({"veg_parm_ID" : "veg0"}, axis='columns')
@@ -184,16 +188,18 @@ for target in target_files:
                 plt.xlabel('After Burn', fontsize=18)
                 plt.xticks(fontsize=16)            
                 plt.figure(figindex)    
+                print("figindex:" + str(figindex))
                 for group in simgroups:
                     tgrp = drange[(drange["sim_group"] == group) & (drange["veg0"] == veg)]
                     xnew = tgrp[timestep]
-                    plt.plot(xnew, tgrp["x_median"], linewidth=2, label=simgroups[group],linestyle=sim_stl[group],color=sim_clr[group])
+                    plt.plot(xnew, tgrp["x_median"], linewidth=lw, label="h " + str(hill) + " " + simgroups[group],linestyle=sim_stl[group],color=sim_clr[group])
+                    #plt.plot(xnew, tgrp["x_median"], linewidth=2, label=simgroups[group] + str(hill),color=sim_clr[group])
                     plt.fill_between(xnew, tgrp["x_q25"], tgrp["x_q75"], color=sim_clr[group], alpha=.3)
                     #plt.fill_between(xnew, tgrp["x_q05"], tgrp["x_q95"], color=sim_clr[group], alpha=.1)
-                plt.legend(fontsize=12)
-                figname = outpath + "/" + var + "_" + veglib[veg] + ".png"
+                plt.legend(fontsize=10)
+                figname = outpath + "/" + var + "_" + veglib[veg] + "_hill_" + str(hill) + ".png"
                 plt.savefig(figname)
-                drange.to_csv(outpath + "/" + var + veglib[veg] + ".csv")
+                #plt.close()
             figindex += 1
 
        

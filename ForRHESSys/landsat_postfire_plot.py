@@ -63,6 +63,58 @@ def q95(x):
 #          3:"grass",
 #          5:"shrub"}
 
+sim_clr = {0:"k",1:"b",2:"g",3:"r"}
+sim_stl = { 0:"-",1:'--',2:':',3:'-.'}
+outpath = "/home/liuming/mnt/hydronas3/Projects/FireEarth/Landsat_post_fire"
+data_file_1 = outpath + "/MTBS_L8_2013_2021_bCascadeclean.csv"
+data_file_2 = outpath + "/MTBS_L5_1984_2012_bCascadeclean.csv"
+data1 = pd.read_csv(data_file_1,delimiter=",",header=0)
+data1['year_aftb'] = data1['year'] - data1['StartYear']
+
+data2 = pd.read_csv(data_file_2,delimiter=",",header=0)
+data2['year_aftb'] = data2['year'] - data2['StartYear']
+
+t = [data1,data2]
+
+dataall = pd.concat(t)
+
+data = dataall.sort_values(by=['Fire_ID','year','doy'])
+
+datamax = data.groupby(["Fire_ID","year_aftb"]).max().reset_index()
+vars = ['NDVI','EVI']
+figindex = 1
+for var in vars:
+    drange = datamax.groupby(['year_aftb']).agg(x_min=(var, 'min'),
+                        x_max=(var, 'max'),
+                        x_mean=(var, 'mean'),
+                        x_median=(var, 'median'),
+                        x_q05=(var, q05),
+                        x_q25=(var, q25),
+                        x_q75=(var, q75),
+                        x_q95=(var, q95)
+                        ).reset_index()
+    plt.figure(num=figindex,figsize=(10,5)) 
+    plt.title(var, fontsize=18)
+    plt.ylabel(var, fontsize=18)
+    plt.yticks(fontsize=16)
+    plt.xlabel('After Burn', fontsize=18)
+    plt.xticks(fontsize=16)            
+    plt.figure(figindex)    
+    print("figindex:" + str(figindex))
+    xnew = drange
+    plt.plot(xnew['year_aftb'], xnew["x_median"], linewidth=2, label="median",linestyle=sim_stl[0],color=sim_clr[0])
+    #plt.plot(xnew, tgrp["x_median"], linewidth=2, label=simgroups[group] + str(hill),color=sim_clr[group])
+    plt.fill_between(xnew['year_aftb'], xnew["x_q25"], xnew["x_q75"], color=sim_clr[0], alpha=.3)
+    plt.fill_between(xnew['year_aftb'], xnew["x_q05"], xnew["x_q95"], color=sim_clr[0], alpha=.1)
+    plt.legend(fontsize=10)
+    figname = outpath + "/" + var + ".png"
+    plt.savefig(figname)
+    drange.to_csv(outpath + "/" + var + ".csv")
+    #plt.close()
+    figindex += 1
+
+"""
+
 veglib = {1:"evergreen"}
 
 #series 1: define pspread (burn intensity), i.e. change byear + pspread + fire_pc_ku_mort + fire_pc_kcons  
@@ -107,7 +159,8 @@ if not os.path.isdir(outpath):
 #                "month_hill_lai_fluxes " : "year_month_hillID_veg0_from_out_patch.monthly_simid_",
 #                "month_hill_plant ": "year_month_hillID_veg_parm_ID_from_out_stratum.monthly_simid_"}
 
-target_files = {"month_hill_lai_fluxes " : "year_month_hillID_veg0_from_out_patch.monthly_simid_"}
+target_files = {"year_hill_pool" : "year_hillID_veg0_from_out_grow_patch.yearly_simid_"}
+hills = [310,356,370]
 
 data = dict()
 #Time series data
@@ -132,6 +185,9 @@ target_vars = {"plant_c" : "kgC/m2",
                "height" : "m"}
 
 for target in target_files:
+  lw = 0
+  for hill in hills:
+    lw += 1
     data[target] = pd.DataFrame()
     for index, row in sims.iterrows():
         #print(row)
@@ -146,7 +202,7 @@ for target in target_files:
                 data[target] = t.copy()
             else:
                 data[target] = data[target].append(t)
-    data[target] = data[target][(data[target]['year'] <= 2017) & (data[target]['year_aftb'] >= -5) & (data[target]["year_aftb"] <= 15)]    
+    data[target] = data[target][(data[target]['year'] <= 2017) & (data[target]['year_aftb'] >= -5) & (data[target]["year_aftb"] <= 15) & (data[target]["hillID"] == hill)]    
 
     if "veg_parm_ID" in data[target].columns:
         data[target] = data[target].rename({"veg_parm_ID" : "veg0"}, axis='columns')
@@ -184,17 +240,19 @@ for target in target_files:
                 plt.xlabel('After Burn', fontsize=18)
                 plt.xticks(fontsize=16)            
                 plt.figure(figindex)    
+                print("figindex:" + str(figindex))
                 for group in simgroups:
                     tgrp = drange[(drange["sim_group"] == group) & (drange["veg0"] == veg)]
                     xnew = tgrp[timestep]
-                    plt.plot(xnew, tgrp["x_median"], linewidth=2, label=simgroups[group],linestyle=sim_stl[group],color=sim_clr[group])
+                    plt.plot(xnew, tgrp["x_median"], linewidth=lw, label="h " + str(hill) + " " + simgroups[group],linestyle=sim_stl[group],color=sim_clr[group])
+                    #plt.plot(xnew, tgrp["x_median"], linewidth=2, label=simgroups[group] + str(hill),color=sim_clr[group])
                     plt.fill_between(xnew, tgrp["x_q25"], tgrp["x_q75"], color=sim_clr[group], alpha=.3)
                     #plt.fill_between(xnew, tgrp["x_q05"], tgrp["x_q95"], color=sim_clr[group], alpha=.1)
-                plt.legend(fontsize=12)
-                figname = outpath + "/" + var + "_" + veglib[veg] + ".png"
+                plt.legend(fontsize=10)
+                figname = outpath + "/" + var + "_" + veglib[veg] + "_hill_" + str(hill) + ".png"
                 plt.savefig(figname)
-                drange.to_csv(outpath + "/" + var + veglib[veg] + ".csv")
+                #plt.close()
             figindex += 1
 
        
-    
+"""    
