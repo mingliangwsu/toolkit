@@ -81,26 +81,26 @@ def objective(item):
 #Run RHESSys related
 cwd = os.getcwd()
 RHESSys="/home/liuming/RHESSys_Ning/RHESSys/build/Qt/gcc/Release/RHESSys"
-droot="/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979"
-RHESSys_outputdir="/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979/Output_calibrations/hydrology"
+droot="/home/liuming/mnt/hydronas2/Projects/FireEarth/Cedar"
+RHESSys_outputdir="/home/liuming/mnt/hydronas3/Projects/Cedar/Output/Output_calibrations/hydrology"
 if not os.path.exists(RHESSys_outputdir):
     command_line = "mkdir -p " + RHESSys_outputdir  
     os.system(command_line)
 os.chdir(droot)
 
 
-flowtable = droot + "/cal-brw/" + "cal-brw.flow"
-worldfile = droot + "/cal-brw/" + "cal-brw.state.Y2016M1D1H1.state.Y2015M1D1H1.state.Y1985M1D1H1.state"
+flowtable = droot + "/liu_Cedar.flow"
+worldfile = droot + "/liu_Cedar.world.Y2015M1D1H1.state.Y2015M1D1H1.state"
 
 #flowtable = droot + "/hill336.flow"
 #worldfile = droot + "/hill336.state"
 
 
-tecfile = droot + "/" + "calibration.tec"
-headfile =  droot + "/" + "br_with_fire.hdr"
+tecfile = droot + "/calibration.tec"
+headfile =  droot + "/defFiles.hdr"
 output_pre = RHESSys_outputdir + "/calib"
-patchgrid = droot + "/" + "../../../../auxdata/patchgrid.txt"
-demgrid = droot + "/" + "../../../../auxdata/demgrid.txt"
+patchgrid = droot + "/patchGrid.txt"
+demgrid = droot + "/DemGrid.txt"
 sim_startyear = 1980
 sim_endyear = 2017
 spyrs = 10
@@ -112,11 +112,11 @@ spins = 2
 
 #calibration related
 calibration_method = "differential_evolution"   #"differential_evolution" "dual_annealing" "minimize"
-outputdir = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/Output_calibrations_results"
+outputdir = "/home/liuming/mnt/hydronas3/Projects/Cedar/Output_calibrations_results"
 #unit is mm/day??
 #fname_basin_daily_out = output_pre + "_basin.daily"
 #unit is m,/day??
-fname_obs = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/calibration/brw_obs_str.csv"
+fname_obs = droot + "/stream_flow_obs.csv"
 fname_cal_evl_result = outputdir + "/" + "cal_evl_nse.txt"
 if not os.path.exists(outputdir):
     command_line = "mkdir -p " + outputdir  
