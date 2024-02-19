@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Nov 18 16:05:13 2022
+
+@author: liuming
+"""
+import os
+import pandas as pd
+import hydrostats.metrics as hm
+#from scipy.optimize import differential_evolution
+import numpy as np
+import matplotlib.pyplot as plt
+#from RHESSys_cal_nse_function import *
+#from pyDOE import *
+def get_sections_with_increasing_dates(df):
+    increasing_sections = []
+
+    # Iterate through the DataFrame to find increasing sections
+    for index, row in df.iterrows():
+        if index == 0:
+            increasing_sections.append(pd.DataFrame(row).T)
+        elif row["date"] > df.loc[index - 1, "date"]:
+            increasing_sections.append(pd.DataFrame(row).T)
+        else:
+            increasing_sections = []
+            increasing_sections.append(pd.DataFrame(row).T)
+    # Concatenate the list of DataFrames
+    result_df = pd.concat(increasing_sections, ignore_index=True)
+    return result_df
+    
+RHESSys_outputdir="/home/liuming/mnt/hydronas3/Projects/WWS_Oregon/GateCreek_RHESSys_output/Output_realrun"
+#os.chdir(droot)
+
+outputdir = RHESSys_outputdir
+
+#USGS observation
+fname_obs = "/home/liuming/mnt/hydronas3/Projects/WWS_Oregon/USGS_gages_observation/usgs_14163000_mm_per_day.csv"
+
+#evaluation_timesteps = ["yearly","monthly","daily"]  #yearly or daily or monthly    yearly: water year
+evaluation_timesteps = ["monthly"] 
+obsdata = pd.read_csv(fname_obs,delimiter=",",header=0)
+obsdata['date'] = pd.to_datetime(obsdata[["year", "month", "day"]])
+
+#data
+obs_years = list(set(obsdata["year"].tolist()))
+
+columns_to_keep = ["year", "month", "day", "date", "streamflow", "precip"]
+
+climates = ["daymet","prism","gridmet"] #,"gridmet"]
+climate_color = {'obs' : 'k',
+                 'daymet' : 'b', 
+                 'gridmet' : 'r',
+                 'prism' : 'y'}
+climate_style = {'obs' : 'solid',
+                 'daymet' : 'dotted',
+                 'gridmet' : 'dashed',
+                 'prism' : 'dashdot'}
+
+
+landuse_years = ['2001','2021']
+sel_df = dict()
+
+for landuse in landuse_years:
+  sel_df[landuse] = dict()
+  for clim in climates:
+    #output_pre = RHESSys_outputdir + '/real_run_' + clim
+    fname_basin_daily_out = RHESSys_outputdir + '/' + clim + '_' + landuse + '/real_run_' + clim + "_basin.daily"
+    basin_daily_out = pd.read_csv(fname_basin_daily_out,delimiter=" ",header=0)
+    basin_daily_out['date'] = pd.to_datetime(basin_daily_out[["year", "month", "day"]])
+    #unit is m,/day??
+
+    #results after spin ups
+    sel = get_sections_with_increasing_dates(basin_daily_out).loc[:, columns_to_keep]
+    sel_df[landuse][clim] = sel[sel['year'].isin(obs_years)]
+    new_stream_name = clim + '_' + landuse + '_streamflow'
+    new_ppt_name = clim + '_' + landuse + '_precip'
+    sel_df[landuse][clim].rename(columns={"streamflow": new_stream_name,"precip" : new_ppt_name}, inplace=True)
+
+#Join all climate results and observations
+alldata = pd.DataFrame()
+for landuse in landuse_years:
+  for clim in climates:
+    if alldata.empty:
+        alldata = sel_df[landuse][clim]
+    else:
+        alldata = pd.merge(alldata,sel_df[landuse][clim],on="date",how="left")
+        if "year_y" in alldata.columns:
+            alldata = alldata.drop(columns=["year_y","month_y","day_y"])
+        if "year_x" in alldata.columns:
+            alldata = alldata.drop(columns=["year_x","month_x","day_x"])
+        
+
+#join observation
+alldata = pd.merge(alldata,obsdata,on="date",how="left")
+if "year_y" in alldata.columns:
+    alldata = alldata.drop(columns=["year_y","month_y","day_y"])
+if "year_x" in alldata.columns:
+    alldata = alldata.drop(columns=["year_x","month_x","day_x"])
+alldata.set_index('date', inplace=True)
+
+"""
+
+monthly_means = alldata.resample('M').sum()
+annual_means = alldata.resample('Y').sum()
+multiyear_monthly_means = alldata.groupby(alldata.index.month).mean()
+
+linew = 0.5
+
+plot_times = ['daily','monthly','annual','mean_monthly']
+climate_vars = ['streamflow','precip']
+#plot_time = 'mean_monthly'
+for plot_time in plot_times:
+  #Plot time series
+  for var in climate_vars: #climate_vars:
+    plt.figure(figsize=(5, 2))
+    for index,climate in enumerate(climates):
+      varname = climate + '_' + var
+      if plot_time == 'daily':
+        #daily
+        plt.plot(alldata.index, alldata[varname], label=climate,color=climate_color[climate],linestyle=climate_style[climate],linewidth=linew)
+        if index == (len(climates)-1) and var == 'streamflow':
+            plt.plot(alldata.index, alldata['obs'], label='obs',color=climate_color['obs'],linestyle=climate_style['obs'],linewidth=linew)
+            
+        if var == 'streamflow':
+            simsubsum = alldata[varname]
+            obssubsum = alldata['obs']
+
+        
+      elif plot_time == 'monthly':
+        #monthly
+        plt.plot(monthly_means.index, monthly_means[varname], label=climate,color=climate_color[climate],linestyle=climate_style[climate],linewidth=linew)
+        if index == (len(climates)-1) and var == 'streamflow':
+            plt.plot(monthly_means.index, monthly_means['obs'], label='obs',color=climate_color['obs'],linestyle=climate_style['obs'],linewidth=linew)
+            
+        if var == 'streamflow':
+            simsubsum = monthly_means[varname]
+            obssubsum = monthly_means['obs']
+            
+      elif plot_time == 'annual':
+        #annual
+        plt.plot(annual_means.index, annual_means[varname], label=climate, color=climate_color[climate], linestyle=climate_style[climate],linewidth=linew)
+        if index == (len(climates)-1) and var == 'streamflow':
+            plt.plot(annual_means.index, annual_means['obs'], label='obs', color=climate_color['obs'], linestyle=climate_style['obs'],linewidth=linew)
+        if var == 'streamflow':
+            simsubsum = annual_means[varname]
+            obssubsum = annual_means['obs']   
+        
+      elif plot_time == 'mean_monthly':
+        #multi-year monthly average
+        plt.plot(multiyear_monthly_means.index, multiyear_monthly_means[varname], label=climate, color=climate_color[climate],linestyle=climate_style[climate],linewidth=linew)
+        plt.xticks(range(1, 13), labels=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+        if index == (len(climates)-1) and var == 'streamflow':
+            plt.plot(multiyear_monthly_means.index, multiyear_monthly_means['obs'], label='obs', color=climate_color['obs'],linestyle=climate_style['obs'],linewidth=linew)
+            plt.xticks(range(1, 13), labels=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+        if var == 'streamflow':
+            simsubsum = multiyear_monthly_means[varname]
+            obssubsum = multiyear_monthly_means['obs']
+      #Calculate NSE
+      if var == 'streamflow':
+          simarray = simsubsum.to_numpy(dtype=np.float64)
+          obsarray = obssubsum.to_numpy(dtype=np.float64)
+          mean_error = hm.nse(simarray, obsarray)
+          print(f'{climate} NSE {plot_time} = {mean_error:.2f}')
+    
+        
+
+
+    plt.xlabel('Time')
+    plt.ylabel(var)
+    plt.title(f'{var}')
+    
+    plt.legend(frameon=False,loc='upper left', bbox_to_anchor=(1, 1))
+    outpng = f'{outputdir}/fig_output_{var}_{plot_time}.png'
+    plt.savefig(outpng,bbox_inches='tight', pad_inches=0.1, dpi=600)
+
+    plt.show()
+"""

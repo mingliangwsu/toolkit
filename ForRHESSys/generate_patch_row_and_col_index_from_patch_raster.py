@@ -20,9 +20,11 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import cm
 
-wdir = "/home/liuming/mnt/hydronas1/Projects/FireEarth/for_min/auxdata/"
-patch_raster = wdir + "patchgrid.txt"
-outfile = wdir + "patch_location.csv"
+#wdir = "/home/liuming/mnt/hydronas1/Projects/FireEarth/for_min/auxdata/"
+wdir = "/home/liuming/mnt/hydronas1/Projects/FireEarth/run_RHESSysPreprocessing/BRW/Input/rasters/"
+#patch_raster = wdir + "patchgrid.txt"
+patch_raster = wdir + "patch_100m_nohead.asc"
+outfile = wdir + "patch_location_100m.csv"
 
 rows = 0
 with open(patch_raster,"r") as f:
