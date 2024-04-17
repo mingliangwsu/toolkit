@@ -9,7 +9,7 @@ import pandas as pd
 import WaterUptakeConfig as Soil
 from ExcelDataframeExchange import *
 from CropWaterUptakeClass import *
-
+from SoilWater import *
 
 def CropWaterUptakeInterface(Cells,Outcells):
     #'Read evapotranspiration Parameters
@@ -32,10 +32,30 @@ def CropWaterUptakeInterface(Cells,Outcells):
     
     for i in range(1, N_Layers+1):
         Soil.Layer_thickness[i] = float(Cells.iloc[i + 16 - 1, 2 - 1])
+        Soil.BD[i] = float(Cells.iloc[i + 16 - 1, 3 - 1])
         Soil.Air_Entry_Potential[i] = float(Cells.iloc[i + 16 - 1, 4 - 1])
-        Soil.Soil_WP[i] = float(Cells.iloc[i + 16 - 1, 7 - 1])
+        Soil.b[i] = float(Cells.iloc[i + 16 - 1, 5 - 1])
+        Soil.WC[i] = float(Cells.iloc[i + 16 - 1, 6 - 1])
+        Soil.Soil_WP[i] = GetSoilWaterPotential(Soil.BD[i], 
+                                                Soil.Air_Entry_Potential[i], 
+                                                Soil.b[i], 
+                                                Soil.WC[i]) #float(Cells.iloc[i + 16 - 1, 7 - 1])
         Soil.WP_At_FC[i] = float(Cells.iloc[i + 16 - 1, 8 - 1])
         Soil.WP_At_PWP[i] = float(Cells.iloc[i + 16 - 1, 9 - 1])
+        Soil.FC[i] = GetSoilWaterContent(Soil.BD[i], 
+                                         Soil.Air_Entry_Potential[i], 
+                                         Soil.b[i], 
+                                         Soil.WP_At_FC[i]) #float(Cells.iloc[i + 16 - 1, 10 - 1])
+        Soil.PWP[i] = GetSoilWaterContent(Soil.BD[i], 
+                                          Soil.Air_Entry_Potential[i], 
+                                          Soil.b[i], 
+                                          Soil.WP_At_PWP[i]) #float(Cells.iloc[i + 16 - 1, 11 - 1])
+        Soil.PAW[i] = GetPlantAvailableWater(Soil.BD[i], 
+                                             Soil.Air_Entry_Potential[i], 
+                                             Soil.b[i], 
+                                             Soil.WC[i], 
+                                             Soil.WP_At_FC[i], 
+                                             Soil.WP_At_PWP[i]) #float(Cells.iloc[i + 16 - 1, 12 - 1])
     
     #'Calculate actual transpiration (kg/m2/d = mm/d)
     #print(f'Nlayers:{N_Layers}')

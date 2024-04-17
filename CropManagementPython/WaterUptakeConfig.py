@@ -7,6 +7,12 @@ Created on Wed Apr 17 10:50:27 2024
 """
 
 Layer_thickness = dict()
+BD = dict()  #'Soil bulk density (kg/m3)
+b = dict()
+WC = dict()
+FC = dict() #'Soil layer field capacity (m3/m3)
+PWP = dict() #'Soil layer permanent wilting point (m3/m3)
+PAW = dict() 
 Soil_WP = dict()
 WP_At_FC = dict()
 WP_At_PWP = dict()
