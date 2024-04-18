@@ -23,6 +23,14 @@ Soil_Water_Uptake = dict()
 Root_Activity_Factor = dict()
 Adjusted_Root_Fraction = dict()
 
+#for N demand
+Potential_N_Uptake = dict()
+Layer_Bottom_Depth = dict()
+Soil_N_Mass = dict()
+Nitrogen_Application_DAE = dict()
+Nitrogen_Application_Amount = dict()
+Layer_N_Uptake = dict()
+
 Cells = None
 
 Crop_Water_Uptake = 0
