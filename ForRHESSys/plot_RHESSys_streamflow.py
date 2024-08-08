@@ -163,7 +163,7 @@ for plot_time in plot_times:
     plt.title(f'{var}')
     
     plt.legend(frameon=False,loc='upper left', bbox_to_anchor=(1, 1))
-    outpng = f'{outputdir}/fig_output_{var}_{plot_time}.png'
+    outpng = f'{outputdir}/test_fig_output_{var}_{plot_time}.png'
     plt.savefig(outpng,bbox_inches='tight', pad_inches=0.1, dpi=600)
 
     plt.show()

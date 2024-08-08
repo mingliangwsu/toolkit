@@ -5,7 +5,7 @@ Created on Wed Apr 17 10:50:27 2024
 
 @author: liuming
 """
-
+Number_Of_Layers = None #'Number of soil layers
 Layer_thickness = dict()
 BD = dict()  #'Soil bulk density (kg/m3)
 b = dict()
