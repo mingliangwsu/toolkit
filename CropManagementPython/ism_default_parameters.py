@@ -11,7 +11,7 @@ import pandas as pd
 defaultPath = "./irrigationtables"
 
 cropparameterfile = f'{defaultPath}/tblcropdefaults.csv'
-soilparameterfile = f'{defaultPath}/tblsoildefaults.csv'
+soilparameterfile = f'{defaultPath}/tblsoildefaults.csv'   #(in/ft)
 cropregionfile = f'{defaultPath}/table_cropRegion.csv'
 stationregionfile = f'{defaultPath}/table_station2region.csv'
 agweathernetstationfile = f'{defaultPath}/AgWeatherNet   Washington State UniversityWSU Cougar HeadWSU Cougar Head.csv'
@@ -22,6 +22,7 @@ cropregion = pd.read_csv(cropregionfile,sep=';', header=0)
 stationregion = pd.read_csv(stationregionfile,sep=';', header=0)
 agweathernetstation = pd.read_csv(agweathernetstationfile,sep=',', header=0)
 
-cropparameter = cropparameter.set_index('cropDefaultsID')
-soilparameter = soilparameter.set_index('soilID')
+cropparameter = cropparameter.set_index('cropName')
+soilparameter = soilparameter.set_index('soilTexture')
 agweathernetstation = agweathernetstation.set_index('Station ID')
+stationregion = stationregion.set_index('stationID')

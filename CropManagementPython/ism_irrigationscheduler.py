@@ -264,3 +264,65 @@ def calcKs(currentSoilProfileWaterStorage,
     elif Ks < 0:
         Ks = 0
     return Ks
+
+def calculateAvailableSoilWaterContentAbovePWP(calculatedSoilWaterAvailability,availableWaterAtFieldCapacity):
+    if(((calculatedSoilWaterAvailability/100) * availableWaterAtFieldCapacity) < 0):
+        availableSoilWaterContentAbovePWP = 0
+    else:
+        availableSoilWaterContentAbovePWP = (calculatedSoilWaterAvailability/100) * availableWaterAtFieldCapacity
+    return availableSoilWaterContentAbovePWP
+
+def calculateCurrentDay(cnt,plantDate,availableSoilWaterContentAbovePWP,
+                        calculatedSoilWaterAvailability,currentSoilProfileWaterStorage,
+                        waterStorageAtFieldCapacityCurrentDay,msdPcnt, sumPrecipCurrentDay, irrigationAppliedCurrentDay, 
+                        ET, deepPercolationCurrentDay, waterStorageAtPermanentWiltingPoint, 
+                        availableWaterAtFieldCapacity,row_tblIndividField):
+        modifiedCurrentDay = 0
+        #//On the first day of the season, assume 100 percent available water unless there is a measured percent
+        if (cnt == plantDate and msdPcnt is None):
+            #// error_log("Assuming 100 percent");
+            availableSoilWaterContentAbovePWP = 100
+            calculatedSoilWaterAvailability = 100
+            currentSoilProfileWaterStorage = waterStorageAtFieldCapacityCurrentDay
+        elif msdPcnt is None:  #it is not the first day, and we don't use a measured percent
+            #// yesterdays water storage ($v1)
+            #// + todays rain 
+            #// + todays irrigation ($v2)
+            #// - todays evapotranspiration 
+            #// + the water storage at field capacity 
+            #// - yesterdays water storage at field capacity ($V3) = 
+            #// potential current soil profile water storage???
+            v1 = row_tblIndividField[cnt-1]['currentSoilProfileWaterStorage']
+            v2 = irrigationAppliedCurrentDay
+            v3 = row_tblIndividField[cnt-1]['waterStorageAtFieldCapacity']
+            sumValue = v1 \
+                                    + sumPrecipCurrentDay \
+                                    + v2 \
+                                    - ET \
+                                    + waterStorageAtFieldCapacityCurrentDay \
+                                    - v3
+            if (sumValue < 0): #//if that is negative, then 0
+                sumValue = 0
+            
+            if (waterStorageAtFieldCapacityCurrentDay > sumValue): #//if todays water stoarage is less than the max
+                currentSoilProfileWaterStorage = sumValue  #//then currentSoilProfileWaterStorage = the calculate value
+            else:
+                #//If there was more water than the field could hold, the extra water is the calculated value - the total field capacity
+                deepPercolationCurrentDay = sumValue - waterStorageAtFieldCapacityCurrentDay
+                #//and currentSoilProfileWaterStorage = the field capacity
+                currentSoilProfileWaterStorage = waterStorageAtFieldCapacityCurrentDay
+            
+            calculatedSoilWaterAvailability = (currentSoilProfileWaterStorage - waterStorageAtPermanentWiltingPoint) \
+                                               / (waterStorageAtFieldCapacityCurrentDay - waterStorageAtPermanentWiltingPoint)
+            if calculatedSoilWaterAvailability > 1:
+                calculatedSoilWaterAvailability = 100
+            elif calculatedSoilWaterAvailability > 0:
+                calculatedSoilWaterAvailability *= 100
+            else:
+                calculatedSoilWaterAvailability = 0
+        else: #// The user entered a measured or corrected percent value
+            currentSoilProfileWaterStorage = msdPcnt/100 * availableWaterAtFieldCapacity + waterStorageAtPermanentWiltingPoint
+            calculatedSoilWaterAvailability = msdPcnt #//$this->row_tblIndividField[$cnt]['measdPcntAvail']
+            modifiedCurrentDay = True
+        return availableSoilWaterContentAbovePWP,calculatedSoilWaterAvailability, \
+               currentSoilProfileWaterStorage,deepPercolationCurrentDay,modifiedCurrentDay

@@ -9,6 +9,16 @@ Original file is located at
 
 import requests
 import pandas as pd
+from datetime import datetime, timedelta
+
+def get_date_from_YDOY(year, day_of_year):
+    # Create a date object for January 1st of the given year
+    jan_first = datetime(year, 1, 1)
+    # Add the day_of_year - 1 to get the correct date
+    date = jan_first + timedelta(days=day_of_year - 1)
+    # Extract year, month, and day from the date
+    return date.year, date.month, date.day
+
 def fetch_AgWeatherNet_data(STATION_ID,START,END,bdaily=False):
     #15 min data:
     #AT_F (Degrees Fahrenheit) air temperature observed at 1.5 meters above the ground
@@ -67,6 +77,10 @@ def fetch_AgWeatherNet_data(STATION_ID,START,END,bdaily=False):
         for col in df.columns:
             if col not in column_to_exclude:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
+        if 'JULDATE_PST' in df.columns:
+            df = df.sort_values(by='JULDATE_PST')
+        else:
+            df = df.sort_values(by='TIMESTAMP_PST')
         return df
       else:
         return None
