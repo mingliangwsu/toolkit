@@ -11,54 +11,7 @@ from ism_irrigationscheduler import *
 from ism_precipitation_and_applicationrate import *
 from accessagweathernet import *
 
-outfile = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results/ism_output.csv'
-
-#field infomation
-#plon,plat = -120.45332,46.97603  #YKB this is for location-based information
-
-#get info from parameters
-fieldInfo = dict()
-
-#one field
-fieldName = 'test1'
-individFieldID = 0
-autoirrigation = True #
-fieldInfo[fieldName] = dict()
-
-thisField = fieldInfo[fieldName]
-thisField['fieldName'] = fieldName
-
-agWeatherStation = '100031' #McNary
-thisField['stationID'] = agWeatherStation
-thisField['stationInfo'] = agweathernetstation.loc[int(agWeatherStation)].squeeze()
-if int(agWeatherStation) in stationregion.index:
-    cropRegionCode = stationregion.loc[int(agWeatherStation)]['regionID']
-else:
-    print(f'{agWeatherStation} is not in stationRegion Table, set region as default\n')
-    cropRegionCode = 720 #default
-
-cropName = 'Tomatoes'
-soilType = 'Loamy Sand'
-thisField['groundWetted'] = 100 #percentage
-
-
-#get soil & crop info
-if soilType in soilparameter.index:
-    thisField['soilInfo'] = soilparameter.loc[soilType].squeeze()
-else:
-    thisField['soilInfo'] = None
-if cropName in cropparameter.index:
-    thisField['cropInfo'] = cropparameter.loc[cropName][cropparameter.loc[cropName,'cropRegion'] == cropRegionCode].squeeze()
-else:
-    thisField['cropInfo'] = None
-
-
-#def updateValues(thisfield, updateFlag, currentYear, todayDOY):
-row_tblIndividField = dict()
-thisfield = thisField
-currentYear = 2023
-todayDOY = 300
-if True:
+def updateValues(thisfield, updateFlag, currentYear, todayDOY, row_tblIndividField):
     #todaysDate = date("M d, Y");
     groundWetted = thisfield['groundWetted']/100
     
@@ -149,7 +102,7 @@ if True:
             RHmax = data.at[idx,'MAX_REL_HUMIDITY']
             RHmin = data.at[idx,'MIN_REL_HUMIDITY']
             rs_MJM2 = data.at[idx,'SR_MJM2']
-            prec
+            #prec
             AnemomH = 1.5 #m
             if not pd.isnull(rs_MJM2):
                 rs = convert_mj_day_m2_to_w_m2(data.at[idx,'SR_MJM2'])
@@ -268,6 +221,59 @@ if True:
         #roots grow at end of day
         if cnt < int(cropinfo['growthDeclineDate']): rootDepth += rootGrowthPerDay
         idx += 1
+    df = pd.DataFrame.from_dict(row_tblIndividField, orient='index')
+    return df
 
-df = pd.DataFrame.from_dict(row_tblIndividField, orient='index')
+
+
+
+outfile = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results/ism_output.csv'
+
+#field infomation
+#plon,plat = -120.45332,46.97603  #YKB this is for location-based information
+
+#get info from parameters
+fieldInfo = dict()
+
+#one field
+fieldName = 'test1'
+individFieldID = 0
+autoirrigation = True #
+fieldInfo[fieldName] = dict()
+
+thisField = fieldInfo[fieldName]
+thisField['fieldName'] = fieldName
+
+agWeatherStation = '100031' #McNary
+thisField['stationID'] = agWeatherStation
+thisField['stationInfo'] = agweathernetstation.loc[int(agWeatherStation)].squeeze()
+if int(agWeatherStation) in stationregion.index:
+    cropRegionCode = stationregion.loc[int(agWeatherStation)]['regionID']
+else:
+    print(f'{agWeatherStation} is not in stationRegion Table, set region as default\n')
+    cropRegionCode = 720 #default
+
+cropName = 'Tomatoes'
+soilType = 'Loamy Sand'
+thisField['groundWetted'] = 100 #percentage
+
+
+#get soil & crop info
+if soilType in soilparameter.index:
+    thisField['soilInfo'] = soilparameter.loc[soilType].squeeze()
+else:
+    thisField['soilInfo'] = None
+if cropName in cropparameter.index:
+    thisField['cropInfo'] = cropparameter.loc[cropName][cropparameter.loc[cropName,'cropRegion'] == cropRegionCode].squeeze()
+else:
+    thisField['cropInfo'] = None
+
+
+#def updateValues(thisfield, updateFlag, currentYear, todayDOY):
+row_tblIndividField = dict()
+thisfield = thisField
+currentYear = 2023
+todayDOY = 300
+updateFlag = True
+df = updateValues(thisfield, updateFlag, currentYear, todayDOY, row_tblIndividField)
 df.to_csv(outfile, index=False)

@@ -136,7 +136,7 @@ def get_all_components_soil_properties(mukey):
     else:
       return None
 
-"""
+
 #plon,plat = -117.1387,46.7374  #Pullman
 #plon,plat = -119.8268,46.7193  #CRB
 #plon,plat = -120.45403,46.97644  #YKB
@@ -148,7 +148,7 @@ result = get_all_components_soil_properties(mukey)
 print(result)
 
 #Linear interpolation
-
+"""
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 

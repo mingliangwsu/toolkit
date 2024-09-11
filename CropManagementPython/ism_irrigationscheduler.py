@@ -134,7 +134,7 @@ def ETCalc(tmax, tmin, tdew, rs, wr, jd, lat, elv, AnemomH):
     ETX = CalcSVP (tmax)        #sat VP at tmax
     ETN = CalcSVP (tmin)        #sat VP at tmin
     EAV = (ETX + ETN) / 2.                #avg sta VP @ ETX, ETN
-    U2 = wr * 4.87 / (math.log (67.8 * AnemomH - 5.42));    #equivalent wind speed at 2 m
+    U2 = wr * 4.87 / (math.log(67.8 * AnemomH - 5.42));    #equivalent wind speed at 2 m
     print(f'rs:{rs} U2:{U2} DELTA:{DELTA} RN:{RN} G:{G} TA:{TA} EAV:{EAV} ED:{ED}')
 
     #Alfalfa Reference ET (ETr) Cn = 1600, Cd = 0.38

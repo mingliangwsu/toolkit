@@ -43,16 +43,16 @@ def GreenCanopyCover(Shape_Coef_Before_Peak,Shape_Coef_During_Decline,
                      DOY_Peak_Value,DOY_Begin_Decline,DOY_End_Of_Season,B1,B2,
                      Asympthotic_Value_max,Actual_Value_max1,Actual_Value_max2,
                      Asymthotic_Value_Decline,DOY):
-    if DOY == DOY_Begin_Season: # 'CANOPY COVER INITILIZED THE DAY OF EMERGENCE
-            Today_GCC_Value = Initial_Value
-    else:
-        if DOY <= DOY_End_Of_Season:
-            if DOY > DOY_Begin_Decline:
-                #'This recalculate Value_max2 and Asymthotic_Value_Decline at the beginning of senescence
-                Actual_Value_max2 = (Peak_Value * (1 + B2) - End_Season_Value) / B2
-                Asymthotic_Value_Decline = Actual_Value_max2 + (End_Season_Value - Actual_Value_max2) * (1 + B2 * math.exp(-Shape_Coef_During_Decline))
+    #if DOY == DOY_Begin_Season: # 'CANOPY COVER INITILIZED THE DAY OF EMERGENCE
+            #Today_GCC_Value = Initial_Value
+    #else:
+    if DOY <= DOY_End_Of_Season:
+        if DOY > DOY_Begin_Decline:
+            #'This recalculate Value_max2 and Asymthotic_Value_Decline at the beginning of senescence
+            Actual_Value_max2 = (Peak_Value * (1 + B2) - End_Season_Value) / B2
+            Asymthotic_Value_Decline = Actual_Value_max2 + (End_Season_Value - Actual_Value_max2) * (1 + B2 * math.exp(-Shape_Coef_During_Decline))
 
-            Today_GCC_Value = CC(B1, B2, Initial_Value, Asympthotic_Value_max, Asymthotic_Value_Decline, End_Season_Value, Peak_Value, DOY,
-                    DOY_Begin_Season, DOY_Peak_Value, DOY_Begin_Decline, DOY_End_Of_Season, Shape_Coef_Before_Peak, Shape_Coef_During_Decline, Actual_Value_max2)
+        Today_GCC_Value = CC(B1, B2, Initial_Value, Asympthotic_Value_max, Asymthotic_Value_Decline, End_Season_Value, Peak_Value, DOY,
+                DOY_Begin_Season, DOY_Peak_Value, DOY_Begin_Decline, DOY_End_Of_Season, Shape_Coef_Before_Peak, Shape_Coef_During_Decline, Actual_Value_max2)
     return Today_GCC_Value
 

@@ -10,6 +10,12 @@ Original file is located at
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
+import numpy as np
+
+def fahrenheit_to_celsius(fahrenheit):
+    # Apply the conversion formula
+    celsius = (fahrenheit - 32) * 5.0 / 9.0
+    return celsius
 
 def get_date_from_YDOY(year, day_of_year):
     # Create a date object for January 1st of the given year
@@ -109,6 +115,29 @@ def aggregate_to_daily(data_15min):
   merged_df['SR_MJM2'] = merged_df['SR_WM2'] * 0.0864
   return merged_df
 
+# Function to calculate the Haversine distance between two points
+def haversine(lat1, lon1, lat2, lon2):
+    # Radius of Earth in kilometers
+    R = 6371.0 
+    # Convert degrees to radians
+    lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
+    
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = np.sin(dlat / 2.0)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2.0)**2
+    c = 2 * np.arcsin(np.sqrt(a))
+    
+    # Distance in kilometers
+    return R * c
+
+def FindClosestStationAndDistance(target_lat,target_lon,stations_df,
+                       lat_col_name,lon_col_name,id_col_name):
+    stations_df['Distance'] = stations_df.apply(lambda row: haversine(
+        target_lat, target_lon, row[lat_col_name], row[lon_col_name]), axis=1)
+    # Find the ID of the closest location
+    closest_location = stations_df.loc[stations_df['Distance'].idxmin()]
+    return closest_location[id_col_name],closest_location["Distance"]
 
 #Testing
 """

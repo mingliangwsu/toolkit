@@ -24,5 +24,5 @@ agweathernetstation = pd.read_csv(agweathernetstationfile,sep=',', header=0)
 
 cropparameter = cropparameter.set_index('cropName')
 soilparameter = soilparameter.set_index('soilTexture')
-agweathernetstation = agweathernetstation.set_index('Station ID')
+#agweathernetstation = agweathernetstation.set_index('Station ID')
 stationregion = stationregion.set_index('stationID')
