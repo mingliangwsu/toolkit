@@ -11,19 +11,19 @@ Thickness_Model_Layers = 0.1
 
 class SoilHorizons:
     Number_Of_Horizons = 0
-    Horizon_Thickness = dict()
-    Clay = dict()
-    Sand = dict()
-    Silt = dict()
+    Horizon_Thickness = dict() #m
+    Clay = dict() #%
+    Sand = dict() #%
+    Silt = dict() #%
     AE_Pot = dict()
     B_Val = dict()
-    FC_WP = dict()
-    PWP_WP = dict()
-    Bulk_Dens = dict()
-    Sat_WC = dict()
-    FC_WC = dict()
-    PWP_WC = dict()
-    Soil_Organic_Carbon = dict()
+    FC_WP = dict() #kPa
+    PWP_WP = dict() #kPa
+    Bulk_Dens = dict()  #(Mg/m3)
+    Sat_WC = dict() #fraction
+    FC_WC = dict() #fraction
+    PWP_WC = dict() #fraction
+    Soil_Organic_Carbon = dict() #%
     Number_Of_Sublayers = dict()
 
 class SoilModelLayer:
@@ -142,13 +142,16 @@ def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer):
         Silt = pSoilHorizons.Silt[i]
         pSoilHorizons.AE_Pot[i] = AE(Sand, Clay)
         pSoilHorizons.B_Val[i] = B(Sand, Clay)
-        pSoilHorizons.FC_WP[i] = WPFC(Clay, Silt)
+        if i not in pSoilHorizons.FC_WP or pSoilHorizons.FC_WP[i] == -9999.0:
+            pSoilHorizons.FC_WP[i] = WPFC(Clay, Silt)
         pSoilHorizons.PWP_WP[i] = -1500
-        pSoilHorizons.Bulk_Dens[i] = BD(Sand, Clay)
-        pSoilHorizons.Sat_WC[i] = WS(Sand, Clay)
-        if pSoilHorizons.FC_WC[i] <= 0: 
+        if i not in pSoilHorizons.Bulk_Dens or pSoilHorizons.Bulk_Dens[i] <= 0:
+            pSoilHorizons.Bulk_Dens[i] = BD(Sand, Clay)
+        if i not in pSoilHorizons.Sat_WC or pSoilHorizons.Sat_WC[i] <= 0:
+            pSoilHorizons.Sat_WC[i] = WS(Sand, Clay)
+        if i not in pSoilHorizons.FC_WC or pSoilHorizons.FC_WC[i] <= 0: 
             pSoilHorizons.FC_WC[i] = WC(pSoilHorizons.Sat_WC[i], pSoilHorizons.FC_WP[i], pSoilHorizons.AE_Pot[i], pSoilHorizons.B_Val[i])
-        if pSoilHorizons.PWP_WC[i] <= 0: 
+        if i not in pSoilHorizons.PWP_WC or pSoilHorizons.PWP_WC[i] <= 0: 
             pSoilHorizons.PWP_WC[i] = WC(pSoilHorizons.Sat_WC[i], pSoilHorizons.PWP_WP[i], pSoilHorizons.AE_Pot[i], pSoilHorizons.B_Val[i])
         pSoilHorizons.Number_Of_Sublayers[i] = int(pSoilHorizons.Horizon_Thickness[i] / Thickness_Model_Layers + 0.5)
     #'Distribute properties for each model layer of thickness 0.1 m

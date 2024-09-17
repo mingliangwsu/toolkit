@@ -18,6 +18,10 @@ from CS_ET import *
 from accessagweathernet import *
 from ism_default_parameters import *
 import datetime
+from accessssurgo_functions import *
+
+def is_blank(s):
+    return not s or not s.strip()
 
 class CS_Weather:
     Solar_Radiation = dict()                                                   #MJ/m2
@@ -80,6 +84,38 @@ def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
         pSoilHorizen.FC_WC[i] = float(Cells.iloc[22 + i - 1, 7 - 1])
         pSoilHorizen.PWP_WC[i] = float(Cells.iloc[22 + i - 1, 8 - 1])
         pSoilHorizen.Soil_Organic_Carbon[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
+def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen):
+    #'Soil description
+    pSoilHorizen.Number_Of_Horizons = df_SSURGO.shape[0]
+    for i in range(1, pSoilHorizen.Number_Of_Horizons+1):
+        t = df_SSURGO.loc[i-1,'hzdept_r']                                        #cm
+        b = df_SSURGO.loc[i-1,'hzdepb_r']                                        #cm
+        pSoilHorizen.Horizon_Thickness[i] = round((b - t) / 100.0,1)           #'Thickness is rounded to one decimal
+        pSoilHorizen.Clay[i] = float(df_SSURGO.loc[i-1, 'claytotal_r'])
+        pSoilHorizen.Silt[i] = float(df_SSURGO.loc[i-1, 'silttotal_r'])
+        pSoilHorizen.Sand[i] = float(df_SSURGO.loc[i-1, 'sandtotal_r'])
+        pSoilHorizen.FC_WP[i] = -33.0 #kPa
+        if is_blank(df_SSURGO.loc[i-1, 'wthirdbar_r']):
+            pSoilHorizen.FC_WC[i] = -9999.0
+        else:
+            pSoilHorizen.FC_WC[i] = float(df_SSURGO.loc[i-1, 'wthirdbar_r']) / 100.0
+        pSoilHorizen.PWP_WP[i] = -1500.0 #kPa
+        if is_blank(df_SSURGO.loc[i-1, 'wfifteenbar_r']):
+            pSoilHorizen.PWP_WC[i] = -9999.0
+        else:
+            pSoilHorizen.PWP_WC[i] = float(df_SSURGO.loc[i-1, 'wfifteenbar_r']) / 100.0
+        if is_blank(df_SSURGO.loc[i-1, 'wsatiated_r']):
+            pSoilHorizen.Sat_WC[i] = -9999.0
+        else:
+            pSoilHorizen.Sat_WC[i] = float(df_SSURGO.loc[i-1, 'wsatiated_r']) / 100.0
+        if is_blank(df_SSURGO.loc[i-1, 'om_r']):
+            pSoilHorizen.Soil_Organic_Carbon[i] = 0.0
+        else:
+            pSoilHorizen.Soil_Organic_Carbon[i] = float(df_SSURGO.loc[i-1, 'om_r'])
+        if is_blank(df_SSURGO.loc[i-1, 'dbthirdbar_r']):
+            pSoilHorizen.Bulk_Dens[i] = -9999.0
+        else:
+            pSoilHorizen.Bulk_Dens[i] = float(df_SSURGO.loc[i-1, 'dbthirdbar_r'])
 def ReadCropGrowth(Cells,pCropGrowth,row_idx):
     #'Soil description
     pCropGrowth.Crop_Name = get_excel_value(Cells,f'A{row_idx}')
@@ -90,6 +126,22 @@ def ReadCropGrowth(Cells,pCropGrowth,row_idx):
     pCropGrowth.Beging_Senescence_DOY = int(get_excel_value(Cells,f'L{row_idx}'))
     pCropGrowth.Maturity_DOY = int(get_excel_value(Cells,f'M{row_idx}'))
     pCropGrowth.Harvest_DOY = int(get_excel_value(Cells,f'N{row_idx}'))
+def GetISMCropGrowthDOYParameters(agWeatherStationID,ISM_cropname,pCropGrowth):
+    if int(agWeatherStationID) in stationregion.index:
+        cropRegionCode = stationregion.loc[int(agWeatherStationID)]['regionID']
+    else:
+        print(f'{agWeatherStationID} is not in stationRegion Table, set region as default\n')
+        cropRegionCode = 720 #default
+    ISM_cropInfo = cropparameter.loc[ISM_cropname][cropparameter.loc[ISM_cropname,'cropRegion'] == cropRegionCode].squeeze()
+    pCropGrowth.Crop_Name = ISM_cropname
+    #pCropGrowth.Expected_Yield = 
+    pCropGrowth.Planting_DOY = int(ISM_cropInfo['plantDate']) - 10
+    pCropGrowth.Emergence_DOY = int(ISM_cropInfo['plantDate'])
+    pCropGrowth.Full_Canopy_DOY = int(ISM_cropInfo['growthMaxDate'])
+    pCropGrowth.Beging_Senescence_DOY = int(ISM_cropInfo['growthDeclineDate'])
+    pCropGrowth.Maturity_DOY = int(ISM_cropInfo['growthEndDate'])
+    #pCropGrowth.Harvest_DOY = int(ISM_cropInfo['plantDate'])
+    
 def ReadFertilization(Cells,pCS_Fertilization):
     start_row_idx = 46 - 1
     end_row_idx = 50 - 1
@@ -194,10 +246,11 @@ def ReadSoilInitial(DOY, Cells,pSoilState,pSoilModelLayer):
         L = (k + NL - 1)
         for j in range(k, L + 1):
             #Layer_Thickness[j] = Thickness[i] / Number_Of_Sublayers[i]
-            pSoilState.Water_Content[DOY][j] = Water[i]
-            pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[j], Water[i], pSoilModelLayer.Air_Entry_Potential[j], pSoilModelLayer.B_value[j])
-            pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / Number_Of_Sublayers[i]
-            pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] / Number_Of_Sublayers[i]
+            if j <= pSoilModelLayer.Number_Model_Layers:
+                pSoilState.Water_Content[DOY][j] = Water[i]
+                pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[j], Water[i], pSoilModelLayer.Air_Entry_Potential[j], pSoilModelLayer.B_value[j])
+                pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / Number_Of_Sublayers[i]
+                pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] / Number_Of_Sublayers[i]
         Cum_J = L + 1
     Number_Model_Layers = Cum_J - 1
     #'Determine the thickness of the soil water evaporation layer
@@ -218,12 +271,19 @@ soil_initial_excel_csv = 'InitSoil_Tool Inputs-Outputs 9-2-24 For Min.csv'
 
 #Feild information
 fieldName = 'test1'   #McNary 100031
+ISM_cropname = 'Corn (silage)'
 field_lat = 45.97
 field_lon = -119.26
 AnemomH = 1.5                                                                  #elevation of anemometer (m)
 sim_year = 2023
 sim_start_doy = 100
 sim_end_doy = 300
+
+#user option
+soil_propertities_from_SSURGO = True
+crop_growth_parameter_from_ISM = True
+weather_from_AgWeatherNet = True
+
 agWeatherStationID,dist = FindClosestStationAndDistance(field_lat,field_lon,agweathernetstation,
                                            "Latitude(N)","Longitude(W)","Station ID")
 
@@ -261,25 +321,55 @@ CropOutput = pd.DataFrame({col: pd.Series(dtype=dt) for col, dt in CropColums.it
 crop_paramater = CropParameter()
 cropCells = pd.read_csv(f'{data_path}/{crop_from_excel_csv}',header=None)
 
+#Soil properties & Crop growth parameters
+InputCells = pd.read_csv(f'{data_path}/{fieldinput_from_excel_csv}',header=None)
+
 #one specific crop
 col_letter = 'J'
 ReadCropParameters(cropCells,crop_paramater,col_letter)
 
 #all crop parameters
 crop_parameters = dict()
-crop_parameters[crop_paramater.Crop_Name] = crop_paramater
+#Use the user selected ISM cropname
+crop_parameters[ISM_cropname] = crop_paramater
 
-#Soil parameters
-InputCells = pd.read_csv(f'{data_path}/{fieldinput_from_excel_csv}',header=None)
-SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
+#Crop growth inputs
+pCropGrowth = CropGrowth()
+CropGrowths = dict()
 
+#Get some growth parameters from user
+crop_row_index = 38
+ReadCropGrowth(InputCells,pCropGrowth,crop_row_index)
+pCropGrowth.Crop_Name = ISM_cropname  #Not using the crop name in the Excel table
+if crop_growth_parameter_from_ISM:  #update some DOY parameters from ISM
+    GetISMCropGrowthDOYParameters(agWeatherStationID,ISM_cropname,pCropGrowth)
+
+CropGrowths[ISM_cropname] = pCropGrowth
 
 
 pSoilHorizen = SoilHorizons()
 pSoilModelLayer = SoilModelLayer()
-ReadSoilHorizonParamegters(InputCells,pSoilHorizen)
+if soil_propertities_from_SSURGO == False:                                     #User set soil horizental properties
+    ReadSoilHorizonParamegters(InputCells,pSoilHorizen)
+else:
+    mukey,muname = get_mukey_muname_from_geocoordinate(field_lon,field_lat)
+    if mukey is not None:
+        #print(f'{mukey}:{muname}')
+        result = get_all_components_soil_properties(mukey)
+        result['comppct_r'] = result['comppct_r'].astype(float)
+        result['hzdept_r'] = result['hzdept_r'].astype(float)
+        result['hzdepb_r'] = result['hzdepb_r'].astype(float)
+        max_cmppct = result['comppct_r'].max()
+        max_cmppct_rows = result[result['comppct_r'] == max_cmppct]
+        max_cmppct_rows_unique_rows = max_cmppct_rows.drop_duplicates(subset=['ch.chkey'], keep='first').sort_values(by='hzdept_r').reset_index(drop=True)
+        GetSoilHorizonParamegtersFromSSURGO(max_cmppct_rows_unique_rows,pSoilHorizen)
+    else:
+        print('Warning: Cannot find SSURGO data for this field!')
 CalculateHydraulicProperties(pSoilHorizen.Number_Of_Horizons,pSoilHorizen,pSoilModelLayer)
 
+
+#Soil initial conditions
+SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
 
 #SoilOutput
 SoilLayers = pSoilModelLayer.Number_Model_Layers
@@ -291,14 +381,7 @@ for i in range(1,SoilLayers + 1):
     SoilColums[f'NH4-N (kg/ha) L{i}'] = "float64"
 SoilOutput = pd.DataFrame({col: pd.Series(dtype=dt) for col, dt in SoilColums.items()})
 
-#Crop growth inputs
-pCropGrowth = CropGrowth()
 
-crop_row_index = 38
-ReadCropGrowth(InputCells,pCropGrowth,crop_row_index)
-
-CropGrowths = dict()
-CropGrowths[pCropGrowth.Crop_Name] = pCropGrowth
 
 #fertilization
 pCS_Fertilization = CS_Fertilization()
@@ -307,22 +390,19 @@ ReadFertilization(InputCells,pCS_Fertilization)
 #irrigation
 irrigations = dict()
 ReadNetIrrigation(InputCells,irrigations)
-    
+
 #Irrigation N concentration
 WaterNConc = float(get_excel_value(InputCells,'D12'))
 
 #Weather data
 pCS_Weather = CS_Weather()
-#ReadWeather(InputCells,pCS_Weather)
-
-#get agWeather daily climate data
-sy,sm,sd = get_date_from_YDOY(sim_year,sim_start_doy)
-ey,em,ed = get_date_from_YDOY(sim_year,sim_end_doy)
-start_date = f'{sy}-{sm:02}-{sd:02}'
-end_date = f'{ey}-{em:02}-{ed:02}'
-bdaily = True
-#data = fetch_AgWeatherNet_data(agWeatherStationID,start_date,end_date,bdaily)
-good_data = GetAgWeatherNetDailyWeather(agWeatherStationID,AnemomH,sim_year,sim_start_doy,sim_end_doy,pCS_Weather)
+if weather_from_AgWeatherNet == False:
+    ReadWeather(InputCells,pCS_Weather)
+else:
+    bdaily = True
+    good_data = GetAgWeatherNetDailyWeather(agWeatherStationID,AnemomH,sim_year,sim_start_doy,sim_end_doy,pCS_Weather)
+    if good_data == False:
+        print('Error: AgWeatherNet data fetch error!\n')
 
 
 #for i in range(1, pSoilHorizen.Number_Of_Horizons+1):
@@ -459,3 +539,4 @@ for DOY in range(Run_First_DOY, Run_Last_DOY+1):
 
 SoilOutput.to_csv(f'{data_path}/{soil_output_excel_csv}',index=False)
 CropOutput.to_csv(f'{data_path}/{crop_output_excel_csv}',index=False)
+
