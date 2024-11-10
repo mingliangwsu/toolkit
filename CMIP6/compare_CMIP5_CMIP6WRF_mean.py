@@ -98,7 +98,7 @@ cmip5['wateryear'] = cmip5.apply(wateryear,axis=1)
 
 
 WRF_vars = ['lw_dwn','sw_dwn','q2','rh','t2','t2max','t2min','prec','wspd10mean']
-#WRF_vars = ['prec','t2']
+WRF_vars = ['prec','t2','t2max','t2min']
 allWRF = pd.DataFrame()
 for WRF_var in WRF_vars:
     df = pd.read_csv(f'/home/liuming/mnt/hydronas3/Projects/CMIP6_Data/statistics/WRF_MACA_Gridmet_mean/new_{WRF_var}.yearmonth.mean.csv')

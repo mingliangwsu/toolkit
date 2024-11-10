@@ -13,9 +13,19 @@ def InitializeCrop(DOY,pCropState, pCropParameter, pETState):
     Depth_Of_Seed = pCropParameter.Seeding_Depth
     Root_Depth_At_Emergence = Depth_Of_Seed + pCropParameter.Initial_Root_Depth_From_Germinated_Seed
     pCropState.Root_Depth[DOY] = Root_Depth_At_Emergence
-    pCropState.Cumulative_Crop_Biomass[DOY] = 0
-    pCropState.Crop_N_Mass[DOY] = 0
+    pCropState.Cumulative_Crop_Biomass[DOY-1] = 0.002
+    pCropState.Seasonal_Biomass = pCropState.Cumulative_Crop_Biomass[DOY-1]
     pETState.Water_Stress_Index[DOY] = 0
+    pETState.Cumulative_Potential_Crop_Biomass[DOY - 1] = pCropState.Cumulative_Crop_Biomass[DOY-1]
+    pETState.Crop_N_Mass[DOY-1] = pCropState.Cumulative_Crop_Biomass[DOY-1] * pCropParameter.Maximum_N_Concentration_Emergence
+    pETState.Cumulative_N_Uptake[DOY] = 0
+    #Soil.CumulativeIrrigation = 0
+    #Soil.CumulativeFertilization = 0
+    #Soil.CumulativeDeepDrainage = 0
+    #Soil.CumulativeNLeaching = 0
+    #ET.TotalTranspiration = 0
+    pETState.Seasonal_N_Uptake = 0
+    
 
 def Biomass(DOY, Potential, pCropState, pCropParameter, pCS_Weather, pETState):
     Transpiration_Use_Efficiency_At_1kpa = pCropParameter.Transpiration_Use_Efficiency_1_kPa
@@ -207,7 +217,7 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
 
 
 def InitCropState(pCropState):
-    for i in range(1,366):
+    for i in range(1,367):
         pCropState.Potential_Green_Canopy_Cover[i] = 0.0
         pCropState.Green_Canopy_Cover[i] = 0.0
         pCropState.Total_Canopy_Cover[i] = 0.0
@@ -220,6 +230,8 @@ def InitCropState(pCropState):
         pCropState.Potential_Crop_Biomass[i] = 0.0
         pCropState.Crop_N_Mass[i] = 0.0
         pCropState.N_Uptake[i] = 0.0
+        pCropState.Nitrate_N_Uptake[i] = 0
+        pCropState.Ammonium_N_Uptake[i] = 0
         pCropState.Cumulative_N_Uptake[i] = 0.0
         pCropState.Crop_N_Concentration[i] = 0.0
         pCropState.Maximum_N_Concentration[i] = 0.0

@@ -17,36 +17,53 @@ class ETState:
     Actual_Soil_Water_Evaporation = dict()
     Water_Stress_Index = dict()
     Root_Fraction = dict()
+    Adjusted_Root_Fraction = dict() #(20) As Double
+    Soil_Water_Uptake = dict() #(366,20)
+    Total_Transpiration = 0
     
-def PotET(DOY, Potential, pCropState, pCropParameter, pCS_Weather, pETState):
-    if Potential:
-        Potential_Total_Canopy_Cover = pCropState.Potential_Total_Canopy_Cover[DOY - 1]
-        Potential_Green_Canopy_Cover = pCropState.Potential_Green_Canopy_Cover[DOY - 1]
-    else:
-        Total_Canopy_Cover = pCropState.Total_Canopy_Cover[DOY]
-        Green_Canopy_Cover = pCropState.Green_Canopy_Cover[DOY]
-
-    Crop_Height = pCropState.Crop_Height[DOY]
+def PotET(DOY, Potential, Potential_Crop, Crop_Active, pCropState, pCropParameter, pCS_Weather, pETState):
     Reference_crop_ET = pCS_Weather.FAO_ETo[DOY]
+    if Reference_crop_ET < 0.01: Reference_crop_ET = 0.01
     Wind_Speed = pCS_Weather.Wind_Speed[DOY]
     Minimum_Relative_Humidity = pCS_Weather.RHmin[DOY]
-    Midseason_ET_Crop_Coefficient = pCropParameter.Midseason_Crop_Coefficient
-    Maximum_Canopy_Cover = pCropParameter.Maximum_Green_Canopy_Cover
+    if Crop_Active:
+        if Potential_Crop:
+            Potential_Total_Canopy_Cover = pCropState.Potential_Total_Canopy_Cover[DOY]
+            Potential_Green_Canopy_Cover = pCropState.Potential_Green_Canopy_Cover[DOY]
+        else:
+            Total_Canopy_Cover = pCropState.Total_Canopy_Cover[DOY]
+            Green_Canopy_Cover = pCropState.Green_Canopy_Cover[DOY]
     
-    #'If Main.GetTreeFruitCrop And (DAP >= Main.GetFruitHarvestDay) Then Today_Kc_transp = 0.2  THIS WILL BE ACTIVATED IF DEALING WITH TREE FRUITS AFTER HARVEST
-    #'    Else
-    
-    #'End If
-    if Potential:
-        Today_Kc_transp = Midseason_ET_Crop_Coefficient * Potential_Green_Canopy_Cover / Maximum_Canopy_Cover
-        pETState.Potential_Crop_Transpiration[DOY] = Reference_crop_ET * Today_Kc_transp
+        Crop_Height = pCropState.Crop_Height[DOY]
+
+        Midseason_ET_Crop_Coefficient = pCropParameter.Midseason_Crop_Coefficient
+        Maximum_Canopy_Cover = pCropParameter.Maximum_Green_Canopy_Cover
+        
+        #'If Main.GetTreeFruitCrop And (DAP >= Main.GetFruitHarvestDay) Then Today_Kc_transp = 0.2  THIS WILL BE ACTIVATED IF DEALING WITH TREE FRUITS AFTER HARVEST
+        #'    Else
+        
+        #'End If
+        if Potential_Crop:
+            Today_Kc_transp = Midseason_ET_Crop_Coefficient * Potential_Green_Canopy_Cover / Maximum_Canopy_Cover
+            pETState.Potential_Crop_Transpiration[DOY] = Reference_crop_ET * Today_Kc_transp
+            Kcmax = max(1.1 + (0.04 * (Wind_Speed - 2) - 0.004 * (Minimum_Relative_Humidity - 45)) * math.pow(Crop_Height / 3, 0.3), 0.05 + Today_Kc_transp)
+            Today_Kc_evap = max(0.05, Kcmax - Midseason_ET_Crop_Coefficient * Total_Canopy_Cover / Maximum_Canopy_Cover) #'accounts for total shading from the canopy (green + senesced)
+            pETState.Potential_Soil_Water_Evaporation[DOY] = Reference_crop_ET * Today_Kc_evap
+            pETState.Potential_ET[DOY] = pETState.Potential_Crop_Transpiration[DOY] + pETState.Potential_Soil_Water_Evaporation[DOY]
+        else:
+            Today_Kc_transp = Midseason_ET_Crop_Coefficient * Green_Canopy_Cover / Maximum_Canopy_Cover
+            Kcmax = max(1.1 + (0.04 * (Wind_Speed - 2) - 0.004 * (Minimum_Relative_Humidity - 45)) * math.pow((Crop_Height / 3), 0.3), 0.05 + Today_Kc_transp)
+            Today_Kc_evap = max(0.05, Kcmax - Midseason_ET_Crop_Coefficient * Total_Canopy_Cover / Maximum_Canopy_Cover) #'accounts for total shading from the canopy (green + senesced)
+            pETState.Potential_Transpiration[DOY] = Reference_crop_ET * Today_Kc_transp
+            pETState.Potential_Soil_Water_Evaporation[DOY] = Reference_crop_ET * Today_Kc_evap
+            pETState.Potential_ET[DOY] = pETState.Potential_Transpiration[DOY] + pETState.Potential_Soil_Water_Evaporation[DOY]
     else:
-        Today_Kc_transp = Midseason_ET_Crop_Coefficient * Green_Canopy_Cover / Maximum_Canopy_Cover
-        Kcmax = max(1.1 + (0.04 * (Wind_Speed - 2) - 0.004 * (Minimum_Relative_Humidity - 45)) * math.pow((Crop_Height / 3), 0.3), 0.05 + Today_Kc_transp)
-        Today_Kc_evap = max(0.05, Kcmax - Midseason_ET_Crop_Coefficient * Total_Canopy_Cover / Maximum_Canopy_Cover) #'accounts for total shading from the canopy (green + senesced)
-        pETState.Potential_Transpiration[DOY] = Reference_crop_ET * Today_Kc_transp
+        Today_Kc_transp = 0
+        Crop_Height = 0
+        Kcmax = max(1.1 + (0.04 * (Wind_Speed - 2.) - 0.004 * (Minimum_Relative_Humidity - 45.)) * math.pow(Crop_Height / 3., 0.3), 0.05 + Today_Kc_transp)
+        Today_Kc_evap = Kcmax
         pETState.Potential_Soil_Water_Evaporation[DOY] = Reference_crop_ET * Today_Kc_evap
-        pETState.Potential_ET[DOY] = pETState.Potential_Transpiration[DOY] + pETState.Potential_Soil_Water_Evaporation[DOY]
+        pETState.Potential_ET[DOY] = pETState.Potential_Soil_Water_Evaporation[DOY]
 
 
 def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETState, pSoilState):
@@ -54,7 +71,7 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
     
     Layer_Plant_Hydraulic_Conductance = dict()
     Layer_Root_Fraction_Adjustment = dict()
-    Adjusted_Root_Fraction = dict()
+    #Adjusted_Root_Fraction = dict()
     Soil_WP = dict()
     WP_At_FC = dict()
     WP_At_PWP = dict()
@@ -67,7 +84,7 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
     #'Read parameters
     LeafWP_Wilt = pCropParameter.LWP_Permanent_Wilting
     Number_Of_Soil_Layers = pSoilModelLayer.Number_Model_Layers
-    for i in range(1, Number_Of_Soil_Layers + 1):
+    for i in range(2, Number_Of_Soil_Layers + 1):
         WP_At_FC[i] = pSoilModelLayer.WP_At_FC[i]
         WP_At_PWP[i] = pSoilModelLayer.WP_At_PWP[i]
         Air_Entry_Potential[i] = pSoilModelLayer.Air_Entry_Potential[i]
@@ -93,7 +110,8 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
     #'Calculate root fraction per soil layer
     Layer_Bottom_Depth = 0
     Root_Fraction_Sum = 0
-    for i in range(1, Number_Of_Soil_Layers + 1):
+    Effective_Root_Depth = max(0, Root_Depth - pSoilModelLayer.Layer_Thickness[i])
+    for i in range(2, Number_Of_Soil_Layers + 1):
         Layer_Thickness = pSoilModelLayer.Layer_Thickness[i]
         if Layer_Thickness > 0: 
           Layer_Bottom_Depth += Layer_Thickness
@@ -106,7 +124,7 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
     #'Adjust root fraction for shallow soils to ensure that the sum of root fraction of all layers is equal to 1
     if (Root_Depth > Layer_Bottom_Depth) and (Root_Fraction_Sum < 1):
         NewRoot_Fraction_Sum = 0
-        for i in range(1, Number_Of_Soil_Layers + 1):
+        for i in range(2, Number_Of_Soil_Layers + 1):
             pETState.Root_Fraction[i] /= Root_Fraction_Sum
             NewRoot_Fraction_Sum += pETState.Root_Fraction[i]
         Root_Fraction_Sum = NewRoot_Fraction_Sum
@@ -114,7 +132,7 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
     
     #'Adjust root fraction based on soil dryness or soil near saturation
     Sum_Root_Fraction_Adjustment = 0
-    for i in range(1, Number_Of_Soil_Layers + 1):
+    for i in range(2, Number_Of_Soil_Layers + 1):
         
         #in some cases Soil_Water_Potential not being updated
         #WC = pSoilState.Water_Content[DOY][i]
@@ -135,18 +153,18 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
         Layer_Root_Fraction_Adjustment[i] = pETState.Root_Fraction[i] * Root_Activity_Factor[i]
         Sum_Root_Fraction_Adjustment += Layer_Root_Fraction_Adjustment[i]
     
-    for i in range(1, Number_Of_Soil_Layers + 1):
+    for i in range(2, Number_Of_Soil_Layers + 1):
         if Sum_Root_Fraction_Adjustment == 0:
-            Adjusted_Root_Fraction[i] = 0
+            pETState.Adjusted_Root_Fraction[i] = 0
             Layer_Plant_Hydraulic_Conductance[i] = 0
         else:
-            Adjusted_Root_Fraction[i] = Layer_Root_Fraction_Adjustment[i] / Sum_Root_Fraction_Adjustment
-            Layer_Plant_Hydraulic_Conductance[i] = Plant_Hydraulic_Conductance * Adjusted_Root_Fraction[i]
+            pETState.Adjusted_Root_Fraction[i] = Layer_Root_Fraction_Adjustment[i] / Sum_Root_Fraction_Adjustment
+            Layer_Plant_Hydraulic_Conductance[i] = Plant_Hydraulic_Conductance * pETState.Adjusted_Root_Fraction[i]
     
     #'Calculate average soil water potential (J/kg)
     Average_Soil_WP = 0
-    for i in range(1, Number_Of_Soil_Layers + 1):
-        Average_Soil_WP += Soil_WP[i] * Adjusted_Root_Fraction[i]
+    for i in range(2, Number_Of_Soil_Layers + 1):
+        Average_Soil_WP += Soil_WP[i] * pETState.Adjusted_Root_Fraction[i]
     
     #'Calculate leaf water potential
     if Plant_Hydraulic_Conductance == 0: 
@@ -162,30 +180,32 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
         
     #'Calculate crop water uptake (kg/m2/d = mm/d)
     Crop_Water_Uptake = 0
-    for i in range(1, Number_Of_Soil_Layers + 1):
-        Soil_Water_Uptake[i] = Layer_Plant_Hydraulic_Conductance[i] * (Soil_WP[i] - Leaf_Water_Pot)
-        Crop_Water_Uptake = Crop_Water_Uptake + Soil_Water_Uptake[i]
+    for i in range(2, Number_Of_Soil_Layers + 1):
+        pETState.Soil_Water_Uptake[DOY][i] = Layer_Plant_Hydraulic_Conductance[i] * (Soil_WP[i] - Leaf_Water_Pot)
+        Crop_Water_Uptake = Crop_Water_Uptake + pETState.Soil_Water_Uptake[DOY][i]
         #'Update water content and potential
-        pSoilState.Water_Content[DOY][i] -= Soil_Water_Uptake[i] / (pSoilModelLayer.Layer_Thickness[i] * WD)
+        pSoilState.Water_Content[DOY][i] -= pETState.Soil_Water_Uptake[DOY][i] / (pSoilModelLayer.Layer_Thickness[i] * WD)
         WC = pSoilState.Water_Content[DOY][i]
         Sat_WC = pSoilModelLayer.Saturation_Water_Content[i]
         AEP = pSoilModelLayer.Air_Entry_Potential[i]
         B_Val = pSoilModelLayer.B_value[i]
         pSoilState.Soil_Water_Potential[i] = WP(Sat_WC, WC, AEP, B_Val)
+        pSoilState.Water_Filled_Porosity[DOY][i] = WC / Sat_WC
 
     Act_Transp = Crop_Water_Uptake
     #print(f'DOY:{DOY} Act_Transp:{Act_Transp} Today_Potential_Transpiration:{Today_Potential_Transpiration}')
     #'This limits in the case that intercepted precipitation is sufficient to meet the evaporative demand
-    if Act_Transp > Today_Potential_Transpiration: Act_Transp = Today_Potential_Transpiration
+    #if Act_Transp > Today_Potential_Transpiration: Act_Transp = Today_Potential_Transpiration
     if Crop_Water_Uptake > 0:
         pETState.Water_Stress_Index[DOY] = 1 - (Crop_Water_Uptake / Today_Expected_Crop_Water_Uptake)
         pETState.Actual_Transpiration[DOY] = Crop_Water_Uptake
     else: #'Crop water uptake is negative due to layer water redistribution by roots
         pETState.Actual_Transpiration[DOY] = 0
-        pETState.Water_Stress_Index[DOY] = 1
+        pETState.Water_Stress_Index[DOY] = 0
 
     if pETState.Water_Stress_Index[DOY] < 0.00000001: pETState.Water_Stress_Index[DOY] = 0
-
+    pETState.Total_Transpiration += pETState.Actual_Transpiration[DOY]
+    
 def CalculateRootFraction(z, dz, Rd):
     if Rd > z: 
         f = dz * (2 * (Rd - z) + dz) / (Rd * Rd)
@@ -222,9 +242,10 @@ def ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState):
     AEP = pSoilModelLayer.Air_Entry_Potential[1]
     B_Val = pSoilModelLayer.B_value[1]
     pSoilState.Soil_Water_Potential[1] = WP(Sat_WC, WC, AEP, B_Val)
-
+    pSoilState.Water_Filled_Porosity[DOY][1] = WC / Sat_WC
+    
 def InitETState(pETState):
-    for i in range(1,366):
+    for i in range(1,367):
         pETState.Potential_Transpiration[i] = 0.0
         pETState.Potential_Crop_Transpiration[i] = 0.0
         pETState.Potential_Soil_Water_Evaporation[i] = 0.0
@@ -232,5 +253,21 @@ def InitETState(pETState):
         pETState.Actual_Transpiration[i] = 0.0
         pETState.Actual_Soil_Water_Evaporation[i] = 0.0
         pETState.Water_Stress_Index[i] = 0.0
+        pETState.Soil_Water_Uptake[i] = dict()
+        for j in range(1,21):
+            pETState.Soil_Water_Uptake[i][j] = 0.0
     for i in range(1,31):
         pETState.Root_Fraction[i] = 0.0
+        pETState.Adjusted_Root_Fraction[i] = 0.
+    pETState.Total_Transpiration = 0.
+
+def ClearETState(pETState):
+    for i in range(1,367):
+        pETState.Potential_Transpiration[i] = 0.0
+        pETState.Potential_Crop_Transpiration[i] = 0.0
+        pETState.Potential_Soil_Water_Evaporation[i] = 0.0
+        pETState.Potential_ET[i] = 0.0
+        pETState.Actual_Transpiration[i] = 0.0
+        pETState.Actual_Soil_Water_Evaporation[i] = 0.0
+        pETState.Water_Stress_Index[i] = 0.0
+    pETState.Total_Transpiration = 0

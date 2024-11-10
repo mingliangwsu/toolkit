@@ -6,8 +6,11 @@ Created on Fri Sep  6 10:13:14 2024
 @author: liuming
 """
 import math
+from AutoIrrigation import *
 #Soil Hydrologics
 Thickness_Model_Layers = 0.1
+Carbon_Fraction_In_SOM = 0.58
+SOC_C_N_Ratio = 12. #kg/kg
 
 class SoilHorizons:
     Number_Of_Horizons = 0
@@ -24,6 +27,7 @@ class SoilHorizons:
     FC_WC = dict() #fraction
     PWP_WC = dict() #fraction
     Soil_Organic_Carbon = dict() #%
+    Percent_Soil_Organic_Matter = dict()
     Number_Of_Sublayers = dict()
 
 class SoilModelLayer:
@@ -38,44 +42,128 @@ class SoilModelLayer:
     Bulk_Density = dict()
     Layer_Thickness = dict()
     Saturation_Water_Content = dict()
+    Clay_Fraction = dict()
+    Fraction_Of_Sand = dict() #(20) As Double
+    Fraction_Of_Silt = dict() #(20) As Double
+    Soil_Mass = dict() #(20) As Double
+    Percent_Soil_Organic_Matter = dict() #(20) As Double
+    Thickness_Evaporative_Layer = 0
 
 class SoilState:
     Water_Content = dict() #(365, 20) As Double
+    
+    Water_Filled_Porosity = dict() #(365, 20) As Double
+    
     Nitrate_N_Content = dict() #(365, 20) As Double
     Ammonium_N_Content = dict() #(365, 20) As Double
+    
+    Soil_Organic_Carbon = dict() #(365, 20) As Double
+    Soil_Organic_Nitrogen = dict() #(365, 20) As Double
+    
+    SOM_C_Pool = dict() #(366, 20) As Double
+    SOM_N_Pool = dict() #(366, 20) As Double
+    Residue_C_Pool = dict() #(366, 20) As Double
+    Residue_N_Pool = dict() #(366, 20) As Double
+    Profile_Nitrate_N_Content = dict() #(366) As Double
+    Profile_Ammonium_N_Content = dict() #(366) As Double
     N_Leaching = dict() #(365) As Double
     Deep_Drainage = dict() #(365) As Double
     Chemical_Balance = dict() #(365) As Double
     Water_Balance = dict() #(365) As Double
     
-    Soil_Water_Potential  = dict() # = dict()
+    Soil_Water_Potential = dict() # = dict()
+    Layer_Daily_Soil_Temperature = dict()
+    Layer_Hourly_Soil_Temperature = dict() #(20,24)?  (Layer, Hour)
     
-    Cumulative_Deep_Drainage = 0
-    Cumulative_N_Leaching = 0
-    Sum_N_Fertilization = 0
+    Oxidation_Water_Function = dict() #6
+    Oxidation_Temperature_Function = dict() #6
+    
+    Saturation_Carbon_Conc_kg_Per_m2 = 0.
+    SOC_Oxidation_Rate = 0.
+    
+    Auto_Irrigation = False
+    Number_Of_Events = 0
+    Method = 0
+    PAW_Trigger = False
+    CWSI_Trigger = False
+    Max_Allowed_CWSI = 0.
+    MAD = 0.
+    Refill_Today = False
+    Soil_Depth_To_Refill = 0.
+    
+class SoilFlux:
+    Mineralization_Top_Three_Layers = dict() #(366) As Double
+    Mineralization_Next_Three_Layers = dict() #(366) As Double
+    Daily_Nitrification = dict() #(366) As Double
+    Daily_Profile_SOC_Pool_Oxidation = dict() #(366) As Double
+    Daily_Profile_Oxidized_SOM_C_Transfer_Back_To_SOM = dict() #(366) As Double
+    Daily_Profile_Oxidized_SOM_N_Transfer_To_Ammonium_Pool = dict() #(366) As Double
+
+    N_Leaching = dict() #(366) As Double
+    Deep_Drainage = dict() #(366) As Double
+    Chemical_Balance = dict() #(366) As Double
+    Water_Balance = dict() #(366) As Double
+
+    Layer_Mineralization = dict() #((366, 20) As Double
+
+    Oxidation_Water_Function = dict() #((6) As Double
+    Oxidation_Temperature_Function = dict() #(6) As Double
+    
+    #Layer_SOC_Pool_Oxidation = 0.
+    Layer_Oxidized_SOM_C_Transfer_Back_To_SOM = 0.
+    Layer_Oxidized_SOM_N_Transferred_To_Ammonium = 0.
+    
+    Cumulative_Mineralization_Top_Three_Layers_All_Days = 0.0
+    Cumulative_Mineralization_Next_Three_Layers_All_Days = 0.0
+    Cumulative_Mineralization_Top_Three_Layers_Crop1 = 0.0
+    Cumulative_Mineralization_Next_Three_Layers_Crop1 = 0.0
+    Cumulative_Mineralization_Top_Three_Layers_Crop2 = 0.0
+    Cumulative_Mineralization_Next_Three_Layers_Crop2 = 0.0
+    
+    Cumulative_Deep_Drainage = 0.
+    Cumulative_N_Leaching = 0.
+    Sum_N_Fertilization = 0.
+    
+    Simulation_Total_N_Leaching = 0.
+    Simulation_Total_Deep_Drainage = 0.
+    Cumulative_Irrigation = 0.
+    Cumulative_Fertilization = 0.
+    Simulation_Total_Irrigation = 0.
+    Simulation_Total_Fertilization = 0.
+    Fertilization_Rate = dict() #(366) As Double
 
 def InitSoilState(pSoilState):
-    for i in range(1,366):
+    for i in range(1,367):
         pSoilState.Water_Content[i] = dict()
+        pSoilState.Water_Filled_Porosity[i] = dict()
         pSoilState.Nitrate_N_Content[i] = dict()
         pSoilState.Ammonium_N_Content[i] = dict()
         for j in range(1,21):
-            pSoilState.Water_Content[i][j] = 0
-            pSoilState.Nitrate_N_Content[i][j] = 0
-            pSoilState.Ammonium_N_Content[i][j] = 0
-        pSoilState.N_Leaching[i] = 0
-        pSoilState.Deep_Drainage[i] = 0
-        pSoilState.Chemical_Balance[i] = 0
-        pSoilState.Water_Balance[i] = 0
+            pSoilState.Water_Content[i][j] = 0.
+            pSoilState.Water_Filled_Porosity[i][j] = 0.
+            pSoilState.Nitrate_N_Content[i][j] = 0.
+            pSoilState.Ammonium_N_Content[i][j] = 0.
+            pSoilState.Soil_Organic_Carbon[i][j] = 0.
+            pSoilState.Soil_Organic_Nitrogen[i][j] = 0.
+        pSoilState.Profile_Nitrate_N_Content[i] = 0.
+        pSoilState.Profile_Ammonium_N_Content[i] = 0.
+        pSoilState.N_Leaching[i] = 0.
+        pSoilState.Deep_Drainage[i] = 0.
+        pSoilState.Chemical_Balance[i] = 0.
+        pSoilState.Water_Balance[i] = 0.
+        pSoilState.Fertilization_Rate[i] = 0.
+        pSoilState.Layer_Daily_Soil_Temperature[i] = 0.
     for j in range(1,21):
-        pSoilState.Soil_Water_Potential[j] = 0
-    Cumulative_Deep_Drainage = 0
-    Cumulative_N_Leaching = 0
-    Sum_N_Fertilization = 0
+        pSoilState.Soil_Water_Potential[j] = 0.
+    for i in range(1, 21):
+        for j in range(1,25):
+            pSoilState.Layer_Hourly_Soil_Temperature[i][j] = 0.
+
 def WS(Sand, Clay):
     #'Calculate saturation water content (m3/m3) using Saxton's pedotransfer function
     WS = 0.332 - 0.0007251 * Sand + (math.log(Clay) / math.log(10)) * 0.1276
     return WS
+
 def BD(Sand, Clay):
     #'Calculate bulk density (Mg/m3)
     #'Calculate saturation water content (m3/m3) using Saxton's pedotransfer function
@@ -171,6 +259,11 @@ def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer):
             pSoilModelLayer.Bulk_Density[j] = pSoilHorizons.Bulk_Dens[i]
             pSoilModelLayer.Saturation_Water_Content[j] = pSoilHorizons.Sat_WC[i]
             pSoilModelLayer.Layer_Thickness[j] = Thickness_Model_Layers
+            
+            pSoilModelLayer.Clay_Fraction[j] = pSoilHorizons.Clay[i] / 100.0   #11052024
+            pSoilModelLayer.Fraction_Of_Sand[j] = pSoilHorizons.Sand[i] / 100 #'Convert percent to fraction
+            pSoilModelLayer.Fraction_Of_Silt[j] = pSoilHorizons.Silt[i] / 100 #'Convert percent to fraction
+            pSoilModelLayer.Percent_Soil_Organic_Matter[j] = pSoilHorizons.Percent_Soil_Organic_Matter[i]
         Cum_J = L + 1
     pSoilModelLayer.Number_Model_Layers = Cum_J - 1
 
@@ -184,7 +277,7 @@ def EquilibriumConcentration(Chemical_Mass, WC, DZ, BD, K, Q):
     return (-B + math.sqrt(B * B - 4 * A * C)) / (2 * A)
 
 def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, NetIrrigationDepth, WaterNConc, 
-                       Prec, Mineral_Fertilization_Rate, Nitrate_Fraction):
+                       Prec, Mineral_Fertilization_Rate, Nitrate_Fraction, AutoIrrigation):
     #'This subroutine only transport nitrate N. Ammonium N only moves down the soil when transformed to nitrate
     Chem_Mass = dict()
     WC = dict()
@@ -209,6 +302,31 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, NetIrrigationDepth, Wat
         BD[Layer] = pSoilModelLayer.Bulk_Density[Layer]
         Initial_Soil_Water_Profile = Initial_Soil_Water_Profile + WC[Layer] * dz[Layer] * WD
         Initial_Profile_Chemical_Mass = Initial_Profile_Chemical_Mass + Chem_Mass[Layer]
+
+        Number_Of_Events = AutoIrrigation.NumberOfAutoEntries
+        for i in range(1, Number_Of_Events + 1):
+            if AutoIrrigation.events[i].DOY_To_Start_Auto_Irrigation == DOY:
+                pSoilState.Auto_Irrigation = True
+                Method = AutoIrrigation.events[i].Scheduling_Method
+                if Method == 1:
+                    MAD = ReadInputs.MaximumAllowablePAWDepletion(i)
+                    PAW_Trigger = True
+                    CWSI_Trigger = False
+                    Else
+                    Max_Allowed_CWSI = ReadInputs.MaximumAllowableCWSI(i)
+                    PAW_Trigger = False
+                    CWSI_Trigger = True
+                End If
+            End If
+            If ReadInputs.DOYToStopAutoIrrigation(i) = DOY Then
+                Auto_Irrigation = False
+            End If
+            If ReadInputs.DOYForRefillIrrigation(i) = DOY Then
+                Refill_Today = True
+                Soil_Depth_To_Refill = ReadInputs.RefillDepth(i)
+            End If
+        Next i
+
 
     #'Find irrigation events
     NID = NetIrrigationDepth

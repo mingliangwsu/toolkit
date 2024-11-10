@@ -163,8 +163,9 @@ def ReadFertilization(Cells,pCS_Fertilization):
 def ReadNetIrrigation(Cells,Irrigation):
     start_row_idx = 58 - 1
     for i in range(1, 10):
-        doy = int(Cells.iloc[start_row_idx + i - 1, 2 - 1])
-        Irrigation[doy] = float(Cells.iloc[start_row_idx + i - 1, 3 - 1])      #mm
+        if not pd.isna(Cells.iloc[start_row_idx + i - 1, 2 - 1]):
+            doy = int(Cells.iloc[start_row_idx + i - 1, 2 - 1])
+            Irrigation[doy] = float(Cells.iloc[start_row_idx + i - 1, 3 - 1])      #mm
 def ReadWeather(Cells,pCS_Weather):
     start_row_idx = 74 - 1
     end_row_idx = 438 - 1
@@ -219,7 +220,7 @@ def GetAgWeatherNetDailyWeather(stationid,AnemomH_m,year,stdoy,eddoy,pCS_Weather
         print(f'Error: {missing_days} days missing climate data\n')
     return good_data
     
-def ReadSoilInitial(DOY, Cells,pSoilState,pSoilModelLayer):
+def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLayer,pSoilHorizen,irrigations,pSoilFlux):
     InitSoilState(pSoilState)
     start_row_idx = 7 - 1
     end_row_idx = 16 - 1
@@ -231,6 +232,8 @@ def ReadSoilInitial(DOY, Cells,pSoilState,pSoilModelLayer):
     Water = dict()
     Nitrate = dict()
     Ammonium = dict()
+    
+    DOY = Run_First_Doy
     
     for i in range(1, Number_Initial_Conditions_Layers + 1):
         Thickness[i] = float(Cells.iloc[i + 6 - 1, 2 - 1])
@@ -245,12 +248,17 @@ def ReadSoilInitial(DOY, Cells,pSoilState,pSoilModelLayer):
         k = Cum_J
         L = (k + NL - 1)
         for j in range(k, L + 1):
-            #Layer_Thickness[j] = Thickness[i] / Number_Of_Sublayers[i]
+            Layer_Thickness[j] = Thickness[i] / Number_Of_Sublayers[i]
             if j <= pSoilModelLayer.Number_Model_Layers:
                 pSoilState.Water_Content[DOY][j] = Water[i]
-                pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[j], Water[i], pSoilModelLayer.Air_Entry_Potential[j], pSoilModelLayer.B_value[j])
+                pSoilState.Water_Filled_Porosity[DOY][j] = Water[i] / pSoilModelLayer.Saturation_Water_Content[i]
+                pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
                 pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / Number_Of_Sublayers[i]
                 pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] / Number_Of_Sublayers[i]
+                pSoilState.Soil_Mass[j] = pSoilModelLayer.Bulk_Density[j] * 1000 # * Layer_Thickness(j) 'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
+                SOC = pSoilState.Soil_Mass[j] * (pSoilModelLayer.Percent_Soil_Organic_Matter[j] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
+                pSoilState.Soil_Organic_Carbon[DOY][j] = SOC
+                pSoilState.Soil_Organic_Nitrogen[DOY][j] = SOC / SOC_C_N_Ratio
         Cum_J = L + 1
     Number_Model_Layers = Cum_J - 1
     #'Determine the thickness of the soil water evaporation layer
@@ -260,6 +268,19 @@ def ReadSoilInitial(DOY, Cells,pSoilState,pSoilModelLayer):
     #'Set accumulators to zero
     Cumulative_Deep_Drainage = 0
     Cumulative_N_Leaching = 0
+    
+    Percent_Sand = pSoilHorizen.Sand[1]
+    Thickness_Evaporative_Layer = round(-0.001 * Percent_Sand + 0.169, 2)
+    pSoilModelLayer.Layer_Thickness[1] = Thickness_Evaporative_Layer           #Check!!!
+    #'Set simulation period accumulators to zero
+    pSoilFlux.Simulation_Total_N_Leaching = 0
+    pSoilFlux.Simulation_Total_Deep_Drainage = 0
+    pSoilFlux.Simulation_Total_Irrigation = 0
+    pSoilFlux.Simulation_Total_Fertilization = 0
+    pSoilState.Auto_Irrigation = False
+    for i in range(Run_First_Doy, Run_Last_Doy+1):
+        irrigations[DOY] = 0
+
         
         
     
@@ -410,6 +431,13 @@ else:
 #for i in range(1, pSoilLayer.Number_Model_Layers+1):
 #    print(f'i:{i} FC_Water_Content:{pSoilLayer.FC_Water_Content[i]} PWP_Water_Content:{pSoilLayer.PWP_Water_Content[i]}') #'Thickness is rounded to one decimal
     
+
+Number_Of_Days_To_Simulate = 0
+Year_Number = 0
+DAE = 0
+DOY_At_DAE = dict() #(366) As Integer
+Crop_Active = False
+
 Run_First_DOY = int(get_excel_value(InputCells,'F15'))
 Crop_Active = False
 

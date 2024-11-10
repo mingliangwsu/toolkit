@@ -51,14 +51,18 @@ class CropState:
     Green_Canopy_Cover = dict()
     Total_Canopy_Cover = dict()
     Potential_Total_Canopy_Cover = dict()
+    Total_CC_Transition = dict()
     Root_Depth = dict()
     Crop_Height = dict()
     Root_Depth_At_Emergence = dict()
     Today_Biomass_Gain = dict()
     Cumulative_Crop_Biomass = dict()
+    Cumulative_Potential_Crop_Biomass = dict() #(366)
     Potential_Crop_Biomass = dict()
     Crop_N_Mass = dict()
     N_Uptake = dict()
+    Nitrate_N_Uptake = dict() #(366) As Double
+    Ammonium_N_Uptake = dict() #(366) As Double
     Cumulative_N_Uptake = dict()
     Crop_N_Concentration = dict()
     Maximum_N_Concentration = dict()
@@ -73,3 +77,6 @@ class CropState:
     DOY_Of_Transition = 0
     Nitrogen_Stress_Index = dict()
     Maximum_Green_Canopy_Cover_Reached = False
+    Seasonal_Biomass = 0.
+    Seasonal_N_Uptake = 0.
+    DAE_Begin_Senescence = 0
