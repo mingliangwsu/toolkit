@@ -27,7 +27,7 @@ def OxidationTemperatureFunction(Layer,pSoilstate):
             Hourly_TF = 0
         else:
             Q = (T_Min - T_Opt) / (T_Opt - T_Max)
-            Hourly_TF = (math.powf(Air_Temperature - T_Min, Q) * (T_Max - Air_Temperature)) / (math.powf(T_Opt - T_Min, Q) * (T_Max - T_Opt))
+            Hourly_TF = (math.pow(Air_Temperature - T_Min, Q) * (T_Max - Air_Temperature)) / (math.pow(T_Opt - T_Min, Q) * (T_Max - T_Opt))
             if Hourly_TF > 1: Hourly_TF = 1.0
             if Hourly_TF < 0.0000001: Hourly_TF = 0.0000001
         Temperature_Function += Hourly_TF / 24.0
@@ -77,8 +77,8 @@ def ClearArrays(pSoilstate,pSoilFlux):
         pSoilFlux.Daily_Profile_Oxidized_SOM_N_Transfer_To_Ammonium_Pool[i] = 0
 
     for i in range(1,7):
-        pSoilFlux.Oxidation_Water_Function[i] = 0
-        pSoilFlux.Oxidation_Temperature_Function[i] = 0
+        pSoilstate.Oxidation_Water_Function[i] = 0
+        pSoilstate.Oxidation_Temperature_Function[i] = 0
         pSoilFlux.Clay_Fraction[i] = 0
 
     for i in range(1,367):
@@ -125,7 +125,9 @@ def Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux):
     #Empirical_Constant_n = 6
     #Empirical_Constant_m = 0.5
     #'Residue_Oxidation_Rate = 0.035 #'(1/day) #'Residue mineralization not implemented yet
-    #SOC_Oxidation_Rate = 0.0005 #'(1/day)  #'0.008 for long-term amd 0.1 for short-term mineralization C-Farm: 0.00015
+    
+    pSoilState.SOC_Oxidation_Rate = 0.0005 #'(1/day)  #'0.008 for long-term amd 0.1 for short-term mineralization C-Farm: 0.00015
+    
     #'Read soil input parameters
     Number_Of_Soil_Layers = 6 #'Only the 6 top layers are considered for mineralization
     pSoilFlux.Daily_Profile_SOC_Pool_Oxidation[DOY] = 0
@@ -150,12 +152,13 @@ def Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux):
         #'Miscellaneous values by soil layer
     #'    Residue_CN_Ratio(Layer) = Residue_C_Pool(Layer) / Residue_N_Pool(Layer) #'***** To be implemented later
         Saturation_Carbon_Conc_g_Per_kg = (21.1 + 37.5 * Clay_Fraction[Layer]) #'g/kg
-        pSoilState.Saturation_Carbon_Conc_kg_Per_m2 = Saturation_Carbon_Conc_g_Per_kg * Soil_Mass[Layer] / 1000#  #'kg/ha
+        pSoilState.Saturation_Carbon_Conc_kg_Per_m2 = Saturation_Carbon_Conc_g_Per_kg * Soil_Mass[Layer] / 1000. #  #'kg/ha
     #'    Maximum_Humification_Rate(Layer) = 0.09 + 0.11 * (1 - Exp(-5.5 * Clay_Fraction(Layer))) #'(1/day) ***** To be implemented later
-        Water_Filled_Porosity = volumetric_Water_Content[Layer] / (1 - Bulk_Density[Layer] / 2.65)
+        Water_Filled_Porosity = volumetric_Water_Content[Layer] / (1. - Bulk_Density[Layer] / 2.65)
         pSoilState.Oxidation_Water_Function[Layer] = OxidationMoistureFunction(0.6, Water_Filled_Porosity)
         pSoilState.Oxidation_Temperature_Function[Layer] = OxidationTemperatureFunction(Layer,pSoilState)
-        CarbonNitrogenChanges(DOY, Layer)
+        #print(f'fw:{pSoilState.Oxidation_Water_Function[Layer]} ft:{pSoilState.Oxidation_Temperature_Function[Layer]}')
+        CarbonNitrogenChanges(DOY, Layer,pSoilModelLayer,pSoilState,pSoilFlux)
         pSoilFlux.Daily_Profile_SOC_Pool_Oxidation[DOY] += pSoilFlux.Layer_SOC_Pool_Oxidation
         pSoilFlux.Daily_Profile_Oxidized_SOM_C_Transfer_Back_To_SOM[DOY] += pSoilFlux.Layer_Oxidized_SOM_C_Transfer_Back_To_SOM
         pSoilFlux.Daily_Profile_Oxidized_SOM_N_Transfer_To_Ammonium_Pool[DOY] += pSoilFlux.Layer_Oxidized_SOM_N_Transferred_To_Ammonium
@@ -166,14 +169,10 @@ def Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux):
     pSoilFlux.Mineralization_Top_Three_Layers[DOY] = pSoilFlux.Layer_Mineralization[DOY][1] + pSoilFlux.Layer_Mineralization[DOY][2] + pSoilFlux.Layer_Mineralization[DOY][3]
     pSoilFlux.Mineralization_Next_Three_Layers[DOY] = pSoilFlux.Layer_Mineralization[DOY][4] + pSoilFlux.Layer_Mineralization[DOY][5] + pSoilFlux.Layer_Mineralization[DOY][6]
     #'Cumulative mineralization from emergence to maturity of crop number one
-    if Crop_Number == 1:
-        pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop1 += pSoilFlux.Mineralization_Top_Three_Layers[DOY]
-        pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop1 += pSoilFlux.Mineralization_Next_Three_Layers[DOY]
+    if Crop_Number > 0:
+        pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop[Crop_Number] += pSoilFlux.Mineralization_Top_Three_Layers[DOY]
+        pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop[Crop_Number] += pSoilFlux.Mineralization_Next_Three_Layers[DOY]
 
-    #'Cumulative mineralization from emergence to maturity of crop number two
-    if Crop_Number == 2:
-        pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop2 += pSoilFlux.Mineralization_Top_Three_Layers[DOY]
-        pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop2 += pSoilFlux.Mineralization_Next_Three_Layers[DOY]
 
     #'Cumulative mineralization for the entire simulation run
     pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_All_Days += pSoilFlux.Mineralization_Top_Three_Layers[DOY]
@@ -194,7 +193,7 @@ def CarbonNitrogenChanges(DOY, Layer,pSoilModelLayer,pSoilState,pSoilFlux):
     #'        Tillage_Effect = Maximum(1, Maximum_Tillage_Effect * Disturbance_Rate(Layer) / (Disturbance_Rate(Layer) + Exp(5.5 - 0.05 * Disturbance_Rate(Layer)))) #'Dimensionless
     #'        Layer_Tillage_Effect(Layer) = 1
     #'    Next Layer
-    Tillage_Effect = 1
+    Tillage_Effect = 1.0
     #'Residue contribution to N mineralization not implemented yet
     #'N_Mineralization_From_Oxidized_Residue_Pool = 0
     #'        Residue_Daily_Oxidation = Residue_C_Pool(Layer) * Residue_Oxidation_Rate * Minimum(Temperature_Function(Layer), Oxidation_Water_Function(Layer)) * Tillage_Effect
@@ -208,12 +207,17 @@ def CarbonNitrogenChanges(DOY, Layer,pSoilModelLayer,pSoilState,pSoilFlux):
     Layer_SOC_Pool_Oxidation = pSoilState.SOM_C_Pool[DOY][Layer] * pSoilState.SOC_Oxidation_Rate * \
                                          math.pow(pSoilState.SOM_C_Pool[DOY][Layer] / pSoilState.Saturation_Carbon_Conc_kg_Per_m2,
                                          Empirical_Constant_m) * \
-                                         min(pSoilFlux.Oxidation_Temperature_Function[Layer], pSoilFlux.Oxidation_Water_Function[Layer]) * Tillage_Effect
+                                         min(pSoilState.Oxidation_Temperature_Function[Layer], pSoilState.Oxidation_Water_Function[Layer]) * Tillage_Effect
+                                         
+    #print(f'Layer_SOC_Pool_Oxidation:{Layer_SOC_Pool_Oxidation} SOM:{pSoilState.SOM_C_Pool[DOY][Layer]} Saturation_Carbon_Conc_kg_Per_m2:{pSoilState.Saturation_Carbon_Conc_kg_Per_m2} Empirical_Constant_m:{Empirical_Constant_m}')
     #Layer_Oxidized_SOM_C_Transfer_To_CO2 = pSoilFlux.Layer_SOC_Pool_Oxidation * (1 - Microbial_Biomass_Synthesis_Efficiency)
-    Layer_Oxidized_SOM_C_Transfer_Back_To_SOM = Layer_SOC_Pool_Oxidation * Microbial_Biomass_Synthesis_Efficiency
-    Layer_N_Released_From_SOM_Oxidation = Layer_SOC_Pool_Oxidation / SOC_C_N_Ratio
-    Layer_Oxidized_SOM_N_Transfer_Back_To_SOM = Layer_Oxidized_SOM_C_Transfer_Back_To_SOM / SOC_C_N_Ratio
-    Layer_Oxidized_SOM_N_Transferred_To_Ammonium = Layer_N_Released_From_SOM_Oxidation - Layer_Oxidized_SOM_N_Transfer_Back_To_SOM
+    pSoilFlux.Layer_Oxidized_SOM_C_Transfer_Back_To_SOM = Layer_SOC_Pool_Oxidation * Microbial_Biomass_Synthesis_Efficiency
+    
+    #print(f'SOM_C_Pool: {pSoilState.SOM_C_Pool[DOY][Layer]} SOC_Oxidation_Rate: {pSoilState.SOC_Oxidation_Rate} SOC_C_N_Ratio:{SOC_C_N_Ratio}')
+    
+    pSoilFlux.Layer_N_Released_From_SOM_Oxidation = Layer_SOC_Pool_Oxidation / SOC_C_N_Ratio
+    pSoilFlux.Layer_Oxidized_SOM_N_Transfer_Back_To_SOM = pSoilFlux.Layer_Oxidized_SOM_C_Transfer_Back_To_SOM / SOC_C_N_Ratio
+    pSoilFlux.Layer_Oxidized_SOM_N_Transferred_To_Ammonium = pSoilFlux.Layer_N_Released_From_SOM_Oxidation - pSoilFlux.Layer_Oxidized_SOM_N_Transfer_Back_To_SOM
     #Total_C_Emission_As_CO2 = Layer_Oxidized_SOM_C_Transfer_To_CO2
     #'Residues not implemented yet
     #'        Total_C_Emission_As_CO2 = Residue_C_Transfer_To_CO2 + Oxidized_SOM_C_Transfer_To_CO2
@@ -226,12 +230,12 @@ def CarbonNitrogenChanges(DOY, Layer,pSoilModelLayer,pSoilState,pSoilFlux):
     #'Update Pools
     #'        Residue_C_Pool(Layer) = Residue_C_Pool(Layer) - Residue_Daily_Oxidation #' + ResidueMicrobial_C_Transfer_Back + Oxidized_SOC_C_Transfer_To_ResidueMicrobial_Pool
     #'        Residue_N_Pool(Layer) = Residue_N_Pool(Layer) - N_Available_From_Oxidized_Residue
-    pSoilState.SOM_C_Pool[DOY][Layer] = pSoilState.SOM_C_Pool[DOY][Layer] - Layer_SOC_Pool_Oxidation + Layer_Oxidized_SOM_C_Transfer_Back_To_SOM #'+ Residue_C_Transfer_To_SOM
-    pSoilState.SOM_N_Pool[DOY][Layer] = pSoilState.SOM_N_Pool[DOY][Layer] - Layer_Oxidized_SOM_N_Transferred_To_Ammonium #'+ Residue_N_Transfer_To_SOM_Pool
-    pSoilState.Soil_Organic_Carbon[DOY][Layer] = pSoilState.Soil_Organic_Carbon[DOY][Layer] - Layer_SOC_Pool_Oxidation + Layer_Oxidized_SOM_C_Transfer_Back_To_SOM #'+ Residue_C_Transfer_To_SOM
-    pSoilState.Soil_Organic_Nitrogen[DOY][Layer] = pSoilState.Soil_Organic_Nitrogen[DOY][Layer] - Layer_Oxidized_SOM_N_Transferred_To_Ammonium #'+ Residue_N_Transfer_To_SOM_Pool
+    pSoilState.SOM_C_Pool[DOY][Layer] = pSoilState.SOM_C_Pool[DOY][Layer] - Layer_SOC_Pool_Oxidation + pSoilFlux.Layer_Oxidized_SOM_C_Transfer_Back_To_SOM #'+ Residue_C_Transfer_To_SOM
+    pSoilState.SOM_N_Pool[DOY][Layer] = pSoilState.SOM_N_Pool[DOY][Layer] - pSoilFlux.Layer_Oxidized_SOM_N_Transferred_To_Ammonium #'+ Residue_N_Transfer_To_SOM_Pool
+    pSoilState.Soil_Organic_Carbon[DOY][Layer] = pSoilState.Soil_Organic_Carbon[DOY][Layer] - Layer_SOC_Pool_Oxidation + pSoilFlux.Layer_Oxidized_SOM_C_Transfer_Back_To_SOM #'+ Residue_C_Transfer_To_SOM
+    pSoilState.Soil_Organic_Nitrogen[DOY][Layer] = pSoilState.Soil_Organic_Nitrogen[DOY][Layer] - pSoilFlux.Layer_Oxidized_SOM_N_Transferred_To_Ammonium #'+ Residue_N_Transfer_To_SOM_Pool
     
-    pSoilState.Ammonium_N_Content[DOY][Layer] += Layer_Oxidized_SOM_N_Transferred_To_Ammonium
+    pSoilState.Ammonium_N_Content[DOY][Layer] += pSoilFlux.Layer_Oxidized_SOM_N_Transferred_To_Ammonium
     
     #'Soil.NitrateNContent(DOY + 1, Layer) = Soil.NitrateNContent(DOY, Layer) + Layer_Oxidized_SOM_N_Transfer_To_Mineral_Pool  #'Assume rapid conversion from NH4 to NO3
     #'Mineral_N_Mass(DOY + 1, Layer) = Mineral_N_Mass(DOY, Layer) + Oxidized_SOM_N_Transfer_To_Mineral_Pool

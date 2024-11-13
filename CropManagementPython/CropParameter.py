@@ -34,7 +34,7 @@ class CropParameter:
     Maximum_N_Concentration_Maturity = -9999.0                                 #Maximum N concentration at maturity (kg/kg)
     Critical_N_Concentration_Maturity = -9999.0                                #Critical N concentration at maturity (kg/kg)
     Minimum_N_Concentration_Maturity = -9999.0                                 #Minimum N concentration at maturity (kg/kg)
-    Potential_N_Uptake = -9999.0                                               #Potential N Uptake (kg/ha/day)
+    #Potential_N_Uptake = -9999.0                                               #Potential N Uptake (kg/ha/day)
     
 class CropGrowth:
     Crop_Name = ""
@@ -45,6 +45,8 @@ class CropGrowth:
     Beging_Senescence_DOY = 0
     Maturity_DOY = 0
     Harvest_DOY = 0
+    Maturity_DAE = 0
+    Harvest_DAE = 0
     
 class CropState:
     Potential_Green_Canopy_Cover = dict()
@@ -61,6 +63,7 @@ class CropState:
     Potential_Crop_Biomass = dict()
     Crop_N_Mass = dict()
     N_Uptake = dict()
+    Seasonal_N_Uptake = dict()
     Nitrate_N_Uptake = dict() #(366) As Double
     Ammonium_N_Uptake = dict() #(366) As Double
     Cumulative_N_Uptake = dict()

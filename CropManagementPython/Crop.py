@@ -6,8 +6,9 @@ Created on Fri Sep  6 15:38:03 2024
 @author: liuming
 """
 import math
+#from canopycover import *
 
-def InitializeCrop(DOY,pCropState, pCropParameter, pETState):
+def InitializeCrop_OBSOLETE(DOY,pCropState, pCropParameter, pETState):
     pCropState.Green_Canopy_Cover[DOY] = pCropParameter.Initial_Green_Canopy_Cover
     pCropState.Total_Canopy_Cover[DOY] = pCropParameter.Initial_Green_Canopy_Cover
     Depth_Of_Seed = pCropParameter.Seeding_Depth
@@ -27,28 +28,36 @@ def InitializeCrop(DOY,pCropState, pCropParameter, pETState):
     pETState.Seasonal_N_Uptake = 0
     
 
-def Biomass(DOY, Potential, pCropState, pCropParameter, pCS_Weather, pETState):
+def Biomass(DOY, Potential_Crop, pCropState, pCropParameter, pCS_Weather, pETState):
     Transpiration_Use_Efficiency_At_1kpa = pCropParameter.Transpiration_Use_Efficiency_1_kPa
     TUE_Slope = pCropParameter.Slope_Daytime_VPD_Function
     
     Maximum_Temperature = pCS_Weather.Tmax[DOY]
     Minimum_Relative_Humidity = pCS_Weather.RHmin[DOY]
-    
-    if Potential:
-        Crop_Transpiration = pETState.Potential_Crop_Transpiration[DOY]
-    else:
-        Crop_Transpiration = pETState.Actual_Transpiration[DOY]
-
-    
-    Daytime_VPD = max(0.5, 0.7 * 0.6108 * math.exp(17.27 * Maximum_Temperature / (Maximum_Temperature + 237.3)) * (1 - Minimum_Relative_Humidity / 100))
+    Daytime_VPD = max(0.5, 0.66 * 0.611 * math.exp(17.502 * Maximum_Temperature / (Maximum_Temperature + 240.97)) * (1 - Minimum_Relative_Humidity / 100.))
     Daily_Transpiration_Use_Efficiency = Transpiration_Use_Efficiency_At_1kpa / math.pow(Daytime_VPD, TUE_Slope)
-    Biomass_Gain = Crop_Transpiration * Daily_Transpiration_Use_Efficiency #'kg biomass per m2 ground area
-    
-    if Potential:
-        pCropState.Potential_Crop_Biomass[DOY] = pCropState.Potential_Crop_Biomass[DOY - 1] + Biomass_Gain
+
+    if Potential_Crop: 
+        Potential_Crop_Transpiration = pETState.Potential_Crop_Transpiration[DOY]
+        Potential_Crop_Biomass_Gain = Potential_Crop_Transpiration * Daily_Transpiration_Use_Efficiency #'kg biomass per m2 ground area
+        if DOY == 1:
+            pCropState.Cumulative_Potential_Crop_Biomass[DOY] = pCropState.Cumulative_Potential_Crop_Biomass[365] + Potential_Crop_Biomass_Gain
+        else:
+            pCropState.Cumulative_Potential_Crop_Biomass[DOY] = pCropState.Cumulative_Potential_Crop_Biomass[DOY - 1] + Potential_Crop_Biomass_Gain
     else:
-        pCropState.Today_Biomass_Gain[DOY] = Biomass_Gain
-        pCropState.Cumulative_Crop_Biomass[DOY] = pCropState.Cumulative_Crop_Biomass[DOY - 1] + Biomass_Gain
+        Actual_Crop_Transpiration = pETState.Actual_Transpiration[DOY]
+        Pot_Transp = pETState.Potential_Crop_Transpiration[DOY]
+        WSF = Actual_Crop_Transpiration / Pot_Transp #'Water Stress Factor
+        if DOY == 1:
+            NSF = 1 - pCropState.Nitrogen_Stress_Index[365] #'Nitrogen Stress Factor
+        else:
+            NSF = 1 - pCropState.Nitrogen_Stress_Index[DOY - 1]
+        Actual_Crop_Biomass_Gain = Pot_Transp * Daily_Transpiration_Use_Efficiency * min(NSF, WSF) #'kg biomass per m2 ground area
+        if DOY == 1:
+            pCropState.Cumulative_Crop_Biomass[DOY] = pCropState.Cumulative_Crop_Biomass[365] + Actual_Crop_Biomass_Gain
+        else:
+            pCropState.Cumulative_Crop_Biomass[DOY] = pCropState.Cumulative_Crop_Biomass[DOY - 1] + Actual_Crop_Biomass_Gain
+        pCropState.Seasonal_Biomass += Actual_Crop_Biomass_Gain
 
 def ReferencePlantNConcentration(DOY, pCropState, pCropParameter, pCropGrowth):
     #'Read input parameters
@@ -67,29 +76,38 @@ def ReferencePlantNConcentration(DOY, pCropState, pCropParameter, pCropGrowth):
     Amax = N_Maximum_Concentration_At_Emergence / math.pow(Biomass_To_Start_Dilution_Maximum_N_Concentration, Slope)
     Acrit = N_Critical_Concentration_At_Emergence / math.pow(Biomass_To_Start_Dilution_Critical_N_Concentration, Slope)
     Amin = N_Minimum_Concentration_At_Emergence / math.pow(Biomass_To_Start_Dilution_Minimum_N_Concentration, Slope)
-    
     DOY_Season_End = pCropGrowth.Maturity_DOY
-    Cumulative_Top_Biomass = pCropState.Potential_Crop_Biomass[DOY] * 10  #'Convert kg/m2 to Mg/ha
-    if DOY <= DOY_Begin_Decline and Cumulative_Top_Biomass > 0:
+    Cumulative_Top_Biomass = pCropState.Cumulative_Potential_Crop_Biomass[DOY] * 10  #'Convert kg/m2 to Mg/ha
+    Begin_Crop_Senescence = False
+    if not Begin_Crop_Senescence:   #DOY <= DOY_Begin_Decline and Cumulative_Top_Biomass > 0:
         tBiomass = math.pow(Cumulative_Top_Biomass, Slope)
         pCropState.Maximum_N_Concentration[DOY] = min(N_Maximum_Concentration_At_Emergence, Amax * tBiomass)
         pCropState.Critical_N_Concentration[DOY] = min(N_Critical_Concentration_At_Emergence, Acrit * tBiomass)
         pCropState.Minimum_N_Concentration[DOY] = min(N_Minimum_Concentration_At_Emergence, Amin * tBiomass)
         if DOY == DOY_Begin_Decline:
+            Begin_Crop_Senescence = True
             pCropState.Maximum_Green_Canopy_Cover_Reached = True
             pCropState.DOY_Of_Transition = DOY
+            
             pCropState.Maximum_N_Concentration_At_Transition = pCropState.Maximum_N_Concentration[DOY]
             pCropState.Critical_N_Concentration_At_Transition = pCropState.Critical_N_Concentration[DOY]
             pCropState.Minimum_N_Concentration_At_Transition = pCropState.Minimum_N_Concentration[DOY]
-            pCropState.Daily_Change_Maximum_N_Concentration = (pCropState.Maximum_N_Concentration_At_Transition - Maximum_N_Concentration_At_Maturity) / (DOY_Season_End - DOY)
-            pCropState.Daily_Change_Critical_N_Concentration = (pCropState.Critical_N_Concentration_At_Transition - Critical_N_Concentration_At_Maturity) / (DOY_Season_End - DOY)
-            pCropState.Daily_Change_Minimum_N_Concentration = (pCropState.Minimum_N_Concentration_At_Transition - Minimum_N_Concentration_At_Maturity) / (DOY_Season_End - DOY)
+            
+            Days_Elapsed = 0
+            if DOY > DOY_Season_End:
+                Days_Elapsed = (365 - DOY) + DOY_Season_End 
+            else: 
+                Days_Elapsed = DOY_Season_End - DOY
+            
+            pCropState.Daily_Change_Maximum_N_Concentration = (pCropState.Maximum_N_Concentration_At_Transition - Maximum_N_Concentration_At_Maturity) / Days_Elapsed
+            pCropState.Daily_Change_Critical_N_Concentration = (pCropState.Critical_N_Concentration_At_Transition - Critical_N_Concentration_At_Maturity) / Days_Elapsed
+            pCropState.Daily_Change_Minimum_N_Concentration = (pCropState.Minimum_N_Concentration_At_Transition - Minimum_N_Concentration_At_Maturity) / Days_Elapsed
     else:
         pCropState.Maximum_N_Concentration[DOY] = pCropState.Maximum_N_Concentration_At_Transition - pCropState.Daily_Change_Maximum_N_Concentration * (DOY - pCropState.DOY_Of_Transition)
         pCropState.Critical_N_Concentration[DOY] = pCropState.Critical_N_Concentration_At_Transition - pCropState.Daily_Change_Critical_N_Concentration * (DOY - pCropState.DOY_Of_Transition)
         pCropState.Minimum_N_Concentration[DOY] = pCropState.Minimum_N_Concentration_At_Transition - pCropState.Daily_Change_Minimum_N_Concentration * (DOY - pCropState.DOY_Of_Transition)
 
-def CanopyCover(DOY, pCropState, pCropParameter, pCropGrowth, pETState):
+def CanopyCover_OBSOLETE(DOY, pCropState, pCropParameter, pCropGrowth, pETState):
     DOY_Begin_Decline = pCropGrowth.Beging_Senescence_DOY
     WSF = 1 - pETState.Water_Stress_Index[DOY - 1]
     NSF = 1 - pCropState.Nitrogen_Stress_Index[DOY - 1]
@@ -108,7 +126,13 @@ def GrowRoot(DOY, pCropState, pCropParameter): #'OJO OJO Calculate root fraction
     GCC_Max = pCropParameter.Maximum_Green_Canopy_Cover
     GCC_Ini = pCropParameter.Initial_Green_Canopy_Cover
     Root_Depth_At_Emergence = pCropParameter.Seeding_Depth + pCropParameter.Initial_Root_Depth_From_Germinated_Seed
-    Rd = Root_Depth_At_Emergence + (RD_Max - Root_Depth_At_Emergence) * (pCropState.Total_Canopy_Cover[DOY] - GCC_Ini) / (GCC_Max - GCC_Ini)
+    Total_Canopy_Cover = pCropState.Total_Canopy_Cover[DOY]
+    if Total_Canopy_Cover < GCC_Ini:
+        Total_Cover = GCC_Ini
+    else: 
+        Total_Cover = Total_Canopy_Cover
+    Rd = Root_Depth_At_Emergence + (RD_Max - Root_Depth_At_Emergence) * (Total_Cover - GCC_Ini) / (GCC_Max - GCC_Ini)
+    if Rd > RD_Max: Rd = RD_Max
     pCropState.Root_Depth[DOY] = Rd
 
 def GrowHeight(DOY, pCropState, pCropParameter):
@@ -136,7 +160,7 @@ def WaterAvailabilityFactor(PAW_Where_N_Upake_Rate_Decreases):
     #'The constants for water_availability_coef were derived from a fitted power trend.
     return 5.259 * pow(PAW_Where_N_Upake_Rate_Decreases, -1.0246)
 
-def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoilModelLayer, pSoilState):
+def NitrogenUptake_OBSOLETE(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoilModelLayer, pSoilState):
     Potential_N_Uptake = dict()
     Root_Fraction = dict()
     Soil_N_Mass = dict()
@@ -215,6 +239,135 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
     else:
         pCropState.Nitrogen_Stress_Index[DOY] = min(1, 1 - (pCropState.Crop_N_Concentration[DOY] - pCropState.Minimum_N_Concentration[DOY]) / (pCropState.Critical_N_Concentration[DOY] - pCropState.Minimum_N_Concentration[DOY]))
 
+def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoilModelLayer, pSoilState):
+    Soil_N_Mass = dict() #(20) As Double
+    Soil_NO3_Mass = dict() #(20) As Double
+    Soil_NH4_Mass = dict() #(20) As Double
+    Nitrate_Mass_Fraction = dict() #(20) As Double
+    Ammonium_Mass_Fraction = dict() #(20) As Double
+    Water_Uptake = dict() #(20) As Double
+    Soil_Solution_N_Conc = dict() #(20) As Double
+    Potential_Passive_N_Uptake = dict() #(20) As Double
+    Potential_Active_N_Uptake = dict() #(20) As Double
+    Actual_Passive_N_Uptake = dict() #(20) As Double
+    Active_N_Uptake = dict() #(20) As Double
+    Layer_Active_NH4_N_Uptake = dict() #(20) As Double
+    Layer_Active_NO3_N_Uptake = dict() #(20) As Double
+
+    
+    Water_Density = 1000 #'kg/m3
+    if DOY == 1:
+        Crop_N = pCropState.Crop_N_Mass[365] 
+    else: 
+        Crop_N = pCropState.Crop_N_Mass[DOY - 1]
+    #'Maximum_Daily_N_Uptake = ReadInputs.PotentialNUptake(Crop_Number) / 10000# 'Convert kg/ha/day to kg/m2/day
+    Cumulative_Top_Biomass = pCropState.Cumulative_Crop_Biomass[DOY] #'kg/m2
+    Today_Plant_N_Max = pCropState.Maximum_N_Concentration[DOY]
+    Surplus = max(0, Crop_N - Today_Plant_N_Max * Cumulative_Top_Biomass)
+    Today_Crop_N_Demand = max(0, Cumulative_Top_Biomass * Today_Plant_N_Max - Crop_N - Surplus) #'Convert biomass from Mg/ha to kg/m2
+    #'Calculate daily potential PASSIVE crop N uptake
+    Total_Potential_Passive_N_Uptake = 0.
+    Total_Water_Uptake = 0.
+    Number_Of_Layers = pSoilModelLayer.Number_Model_Layers
+    for Layer in range(2, Number_Of_Layers + 1):
+        Water_Uptake[Layer] = pETState.Soil_Water_Uptake[DOY][Layer]
+        if Water_Uptake[Layer] > 0: Total_Water_Uptake += Water_Uptake[Layer]
+        Soil_NO3_Mass[Layer] = pSoilState.Nitrate_N_Content[DOY][Layer]
+        Soil_NH4_Mass[Layer] = pSoilState.Ammonium_N_Content[DOY][Layer]
+        Water_Content = pSoilState.Water_Content[DOY][Layer]
+        Layer_Thickness = pSoilModelLayer.Layer_Thickness[Layer]
+        Soil_Solution_N_Conc[Layer] = Soil_NO3_Mass[Layer] / (Water_Content * Water_Density * Layer_Thickness) #'kg/kg   Only nitrate considered for passive uptake
+        if Water_Uptake[Layer] > 0:
+            Potential_Passive_N_Uptake[Layer] = Water_Uptake[Layer] * Soil_Solution_N_Conc[Layer]  #'kg/m2
+        else:
+            Potential_Passive_N_Uptake[Layer] = 0
+
+        if Potential_Passive_N_Uptake[Layer] > Soil_NO3_Mass[Layer]: Potential_Passive_N_Uptake[Layer] = Soil_NO3_Mass[Layer]
+        Total_Potential_Passive_N_Uptake += Potential_Passive_N_Uptake[Layer]
+
+    Today_Expected_Passive_N_Uptake = min(Today_Crop_N_Demand, Total_Potential_Passive_N_Uptake)
+    #'Determine actual passive NO3-N uptake and update soil nitrate mass
+    Total_Actual_Passive_N_Upt = 0.
+    for Layer in range(2, Number_Of_Layers + 1):
+        Actual_Passive_N_Uptake[Layer] = 0.
+        if Total_Potential_Passive_N_Uptake > 0:
+            Actual_Passive_N_Uptake[Layer] = Potential_Passive_N_Uptake[Layer] * Today_Expected_Passive_N_Uptake / Total_Potential_Passive_N_Uptake
+
+        Total_Actual_Passive_N_Upt += Actual_Passive_N_Uptake[Layer]
+        Soil_NO3_Mass[Layer] -= Actual_Passive_N_Uptake[Layer]
+
+    Passive_Uptake_Deficit = max(0, Today_Crop_N_Demand - Total_Actual_Passive_N_Upt)
+    for Layer in range(2, Number_Of_Layers + 1):
+        if Passive_Uptake_Deficit > 0 and Total_Actual_Passive_N_Upt > 0: #'Calculate daily potential ACTIVE uptake by layer
+                Maximum_Active_N_Uptake = Passive_Uptake_Deficit * Actual_Passive_N_Uptake[Layer] / Total_Actual_Passive_N_Upt
+        else:
+            if Water_Uptake[Layer] > 0:
+                Maximum_Active_N_Uptake = Passive_Uptake_Deficit * Water_Uptake[Layer] / Total_Water_Uptake
+            else:
+                Maximum_Active_N_Uptake = 0.
+        Soil_Solution_N_Conc[Layer] = (Soil_NO3_Mass[Layer] + Soil_NH4_Mass[Layer]) / (Water_Content * Water_Density * Layer_Thickness) #'kg/kg   [NO3] + [NH4] added for active uptake
+        
+        #'Hard-Coded Parameters
+        Min_Conc_For_Active_Uptake = 0.00005
+        Km = 0.00005
+        if Soil_Solution_N_Conc[Layer] < Min_Conc_For_Active_Uptake:
+            Relative_Active_Uptake = 0
+        else:
+            Relative_Active_Uptake = max(0, (Soil_Solution_N_Conc[Layer] - Min_Conc_For_Active_Uptake) / (Km + Soil_Solution_N_Conc[Layer] - Min_Conc_For_Active_Uptake))
+
+        Active_N_Uptake[Layer] = Maximum_Active_N_Uptake * Relative_Active_Uptake
+        Available_For_Active_Uptake = Soil_NO3_Mass[Layer] + Soil_NH4_Mass[Layer]
+        if Active_N_Uptake[Layer] > Available_For_Active_Uptake: Active_N_Uptake[Layer] = Available_For_Active_Uptake
+        #'Update Soil N
+        Layer_Active_NH4_N_Uptake[Layer] = min(Active_N_Uptake[Layer], Soil_NH4_Mass[Layer])
+        Layer_Active_NO3_N_Uptake[Layer] = Active_N_Uptake[Layer] - Layer_Active_NH4_N_Uptake[Layer]
+
+    
+    Today_N_Uptake = 0.
+    Today_NO3_N_Uptake = 0.
+    Today_NH4_N_Uptake = 0.
+    for Layer in range(2, Number_Of_Layers + 1):
+        pSoilState.Ammonium_N_Content[DOY][Layer] -= Layer_Active_NH4_N_Uptake[Layer]
+        pSoilState.Nitrate_N_Content[DOY][Layer] -= Layer_Active_NO3_N_Uptake[Layer] + Actual_Passive_N_Uptake[Layer]
+        Today_NO3_N_Uptake += Layer_Active_NO3_N_Uptake[Layer] + Actual_Passive_N_Uptake[Layer]
+        Today_NH4_N_Uptake += Layer_Active_NH4_N_Uptake[Layer]
+        Today_N_Uptake += Actual_Passive_N_Uptake[Layer] + Layer_Active_NH4_N_Uptake[Layer] + Layer_Active_NO3_N_Uptake[Layer]
+        
+    if DOY == 1:
+        pCropState.Seasonal_N_Uptake = pCropState.Cumulative_N_Uptake[365] + Today_N_Uptake 
+    else: 
+        pCropState.Seasonal_N_Uptake = pCropState.Cumulative_N_Uptake[DOY - 1] + Today_N_Uptake
+    Crop_N += Today_N_Uptake #'Crop N mass different to cumulative N uptake only if Crop N mass set at emergence or foliar applications considered
+    Crop_N_Conc = Crop_N / Cumulative_Top_Biomass
+    #'Update variables
+    pCropState.Crop_N_Mass[DOY] = Crop_N
+    pCropState.N_Uptake[DOY] = Today_N_Uptake
+    pCropState.Nitrate_N_Uptake[DOY] = Today_NO3_N_Uptake
+    pCropState.Ammonium_N_Uptake[DOY] = Today_NH4_N_Uptake
+    pCropState.Cumulative_N_Uptake[DOY] = pCropState.Seasonal_N_Uptake
+    pCropState.Crop_N_Concentration[DOY] = Crop_N_Conc
+    if pCropState.Crop_N_Concentration[DOY] >= pCropState.Critical_N_Concentration[DOY]:
+        pCropState.Nitrogen_Stress_Index[DOY] = 0
+    else:
+        pCropState.Nitrogen_Stress_Index[DOY] = min(1, 1 - (pCropState.Crop_N_Concentration[DOY] - pCropState.Minimum_N_Concentration[DOY]) / (pCropState.Critical_N_Concentration[DOY] - pCropState.Minimum_N_Concentration[DOY]))
+
+def InitializeCrop(DOY,pCropState,pSoilFlux,pCropParameter,pETState):
+    pCropState.Green_Canopy_Cover[DOY] = pCropParameter.Initial_Green_Canopy_Cover
+    pCropState.Total_Canopy_Cover[DOY] = pCropParameter.Initial_Green_Canopy_Cover
+    Depth_Of_Seed = pCropParameter.Seeding_Depth
+    Root_Depth_At_Emergence = Depth_Of_Seed + pCropParameter.Initial_Root_Depth_From_Germinated_Seed
+    pCropState.Root_Depth[DOY] = Root_Depth_At_Emergence
+    pCropState.Cumulative_Crop_Biomass[DOY - 1] = 0.002
+    pCropState.Seasonal_Biomass = pCropState.Cumulative_Crop_Biomass[DOY - 1]
+    pCropState.Cumulative_Potential_Crop_Biomass[DOY - 1] = pCropState.Cumulative_Crop_Biomass[DOY - 1]
+    pCropState.Crop_N_Mass[DOY - 1] = pCropState.Cumulative_Crop_Biomass[DOY - 1] * pCropParameter.Maximum_N_Concentration_Emergence
+    pCropState.Cumulative_N_Uptake[DOY] = 0.
+    pSoilFlux.Cumulative_Irrigation = 0.
+    pSoilFlux.CumulativeFertilization = 0.
+    pSoilFlux.CumulativeDeepDrainage = 0.
+    pSoilFlux.CumulativeNLeaching = 0.
+    pETState.Total_Transpiration = 0.
+    pCropState.Seasonal_N_Uptake = 0.
 
 def InitCropState(pCropState):
     for i in range(1,367):
@@ -226,6 +379,7 @@ def InitCropState(pCropState):
         pCropState.Crop_Height[i] = 0.0
         pCropState.Root_Depth_At_Emergence[i] = 0.0
         pCropState.Today_Biomass_Gain[i] = 0.0
+        pCropState.Cumulative_Potential_Crop_Biomass[i] = 0.0
         pCropState.Cumulative_Crop_Biomass[i] = 0.0
         pCropState.Potential_Crop_Biomass[i] = 0.0
         pCropState.Crop_N_Mass[i] = 0.0
@@ -246,4 +400,102 @@ def InitCropState(pCropState):
         pCropState.DOY_Of_Transition = 0
         pCropState.Nitrogen_Stress_Index[i] = 0.0
         pCropState.Maximum_Green_Canopy_Cover_Reached = False
-        
+
+
+def CC(B1, B2, Value_ini, Value_max, Asymthotic_Value_Decline, Value_end, 
+       Current_Value, DAE, DAE_Begin_Season, DAE_At_Peak_Value, 
+       DAE_At_Begin_Decline, DAE_At_End_Of_Season, Shape_Coef_Before_Peak, 
+       Shape_Coef_During_Decline, Actual_Value_max2):
+    Relative_TT_Increasing_Value = 0.
+    Relative_TT_Declining_Value = 0.
+    
+    if DAE <= DAE_At_Peak_Value:
+        Relative_TT_Increasing_Value = (DAE - DAE_Begin_Season) / (DAE_At_Peak_Value - DAE_Begin_Season)
+        fCC = Value_ini + (Value_max - Value_ini) / (1. + B1 * math.exp(-Shape_Coef_Before_Peak * Relative_TT_Increasing_Value))
+    else:
+        if DAE <= DAE_At_End_Of_Season and DAE >= DAE_At_Begin_Decline:
+            Relative_TT_Declining_Value = (DAE - DAE_At_Begin_Decline) / (DAE_At_End_Of_Season - DAE_At_Begin_Decline)
+            fCC = Actual_Value_max2 - (Actual_Value_max2 - Asymthotic_Value_Decline) / (1. + B2 * math.exp(-Shape_Coef_During_Decline * Relative_TT_Declining_Value))
+            if fCC < Value_end: fCC = Value_end
+            if fCC > Actual_Value_max2: fCC = Actual_Value_max2
+        else:
+            fCC = Current_Value
+    return fCC
+
+def CanopyCover(DOY, DAE, Crop_Number, pCropState, pCropParameter, pCropGrowth, pETState):
+    if DOY == pCropGrowth.Emergence_DOY:
+        DOY_Begin_Decline = pCropGrowth.Beging_Senescence_DOY
+        DOY_Emergence = pCropGrowth.Emergence_DOY
+        if DOY_Emergence > DOY_Begin_Decline: 
+            pCropState.DAE_Begin_Senescence = (365. - DOY_Emergence) + DOY_Begin_Decline
+        else: 
+            pCropState.DAE_Begin_Senescence = DOY_Begin_Decline - DOY_Emergence
+
+    
+    if DOY == 1: 
+        Adj_DOY = 365
+    else: 
+        Adj_DOY = DOY - 1
+    if DAE <= pCropState.DAE_Begin_Senescence: 
+        WSF = 1. - pETState.Water_Stress_Index[Adj_DOY]
+        NSF = (1. - pCropState.Nitrogen_Stress_Index[Adj_DOY]) #'^ 0.5
+        Canopy_Expansion = (pCropState.Potential_Green_Canopy_Cover[DOY] - pCropState.Potential_Green_Canopy_Cover[Adj_DOY]) * min(WSF, NSF)
+        pCropState.Green_Canopy_Cover[DOY] = pCropState.Green_Canopy_Cover[Adj_DOY] + Canopy_Expansion
+        pCropState.Total_Canopy_Cover[DOY] = pCropState.Green_Canopy_Cover[DOY]
+        pCropState.Total_CC_Transition = pCropState.Total_Canopy_Cover[DOY]
+    else:   #'Senescence
+        Canopy_Senescence = (pCropState.Potential_Green_Canopy_Cover[Adj_DOY] - pCropState.Potential_Green_Canopy_Cover[DOY])
+        pCropState.Green_Canopy_Cover[DOY] = max(0, pCropState.Green_Canopy_Cover[Adj_DOY] - Canopy_Senescence)
+        pCropState.Total_Canopy_Cover[DOY] = pCropState.Total_CC_Transition
+
+def PotentialCanopyCover(Crop_Number, DAE, DOY, pCropParameter, pCropState, pCropGrowth):
+    #'HARD-CODED PARAMETERS. DO NOT EXPOSE
+    Shape_Coef_Before_Peak = 9
+    Shape_Coef_During_Decline = 9
+    Time_Fraction_At_Half_Peak_Value = 0.5
+    Time_Fraction_At_Half_Decline = 0.5
+    
+    
+    Initial_Value = pCropParameter.Initial_Green_Canopy_Cover
+    Peak_Value = pCropParameter.Maximum_Green_Canopy_Cover
+    End_Season_Value = pCropParameter.Maturity_Green_Canopy_Cover
+    DOY_Begin_Season = pCropGrowth.Emergence_DOY
+    DOY_Peak_Value = pCropGrowth.Full_Canopy_DOY
+    DOY_Begin_Decline = pCropGrowth.Beging_Senescence_DOY
+    DOY_End_Of_Season = pCropGrowth.Maturity_DOY
+    DAE_Begin_Season = 0
+    if DOY_Begin_Season > DOY_Peak_Value:
+        DAE_At_Peak_Value = (365 - DOY_Begin_Season) + DOY_Peak_Value 
+    else: 
+        DAE_At_Peak_Value = DOY_Peak_Value - DOY_Begin_Season
+    
+    if DOY_Begin_Season > DOY_Begin_Decline:
+        DAE_At_Begin_Decline = (365 - DOY_Begin_Season) + DOY_Begin_Decline 
+    else: 
+        DAE_At_Begin_Decline = DOY_Begin_Decline - DOY_Begin_Season
+    
+    if DOY_Begin_Season > DOY_End_Of_Season:
+        DAE_At_End_Of_Season = (365 - DOY_Begin_Season) + DOY_End_Of_Season 
+    else: 
+        DAE_At_End_Of_Season = DOY_End_Of_Season - DOY_Begin_Season
+    
+
+    #'Derived parameters for the standard green canopy curve
+    B1 = 1 / math.exp(-Shape_Coef_Before_Peak * Time_Fraction_At_Half_Peak_Value)
+    B2 = 1 / math.exp(-Shape_Coef_During_Decline * Time_Fraction_At_Half_Decline)
+    Asympthotic_Value_max = (Peak_Value - Initial_Value) * (1 + B1 * math.exp(-Shape_Coef_Before_Peak * 1)) + Initial_Value
+    Actual_Value_max1 = Initial_Value + (Asympthotic_Value_max - Initial_Value) / (1 + B1 * math.exp(-Shape_Coef_Before_Peak))
+    Actual_Value_max2 = (Actual_Value_max1 * (1 + B2) - End_Season_Value) / B2
+    Asymthotic_Value_Decline = Actual_Value_max2 + (End_Season_Value - Actual_Value_max2) * (1 + B2 * math.exp(-Shape_Coef_During_Decline))
+    if DAE <= DAE_At_End_Of_Season and DAE == DAE_At_Begin_Decline:
+        #'This recalculate Value_max2 and Asymthotic_Value_Decline at the beginning of senescence
+        Actual_Value_max2 = (Peak_Value * (1 + B2) - End_Season_Value) / B2
+        Asymthotic_Value_Decline = Actual_Value_max2 + (End_Season_Value - Actual_Value_max2) * (1 + B2 * math.exp(-Shape_Coef_During_Decline))
+
+    Today_GCC_Value = CC(B1, B2, Initial_Value, Asympthotic_Value_max, Asymthotic_Value_Decline, End_Season_Value, Peak_Value, DAE, 
+                DAE_Begin_Season, DAE_At_Peak_Value, DAE_At_Begin_Decline, DAE_At_End_Of_Season, Shape_Coef_Before_Peak, Shape_Coef_During_Decline, Actual_Value_max2)
+    pCropState.Potential_Green_Canopy_Cover[DOY] = Today_GCC_Value
+    if DAE <= DAE_At_Begin_Decline: 
+        pCropState.Potential_Total_Canopy_Cover[DOY] = pCropState.Potential_Green_Canopy_Cover[DOY] 
+    else:
+        pCropState.Potential_Total_Canopy_Cover[DOY] = pCropState.Potential_Total_Canopy_Cover[DOY - 1]

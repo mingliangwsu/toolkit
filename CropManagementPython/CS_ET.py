@@ -19,9 +19,9 @@ class ETState:
     Root_Fraction = dict()
     Adjusted_Root_Fraction = dict() #(20) As Double
     Soil_Water_Uptake = dict() #(366,20)
-    Total_Transpiration = 0
+    Total_Transpiration = 0.
     
-def PotET(DOY, Potential, Potential_Crop, Crop_Active, pCropState, pCropParameter, pCS_Weather, pETState):
+def PotET(DOY, Potential_Crop, Crop_Active, pCropState, pCropParameter, pCS_Weather, pETState):
     Reference_crop_ET = pCS_Weather.FAO_ETo[DOY]
     if Reference_crop_ET < 0.01: Reference_crop_ET = 0.01
     Wind_Speed = pCS_Weather.Wind_Speed[DOY]
