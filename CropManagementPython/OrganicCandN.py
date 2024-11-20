@@ -141,7 +141,7 @@ def Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux):
         Bulk_Density[Layer] = pSoilModelLayer.Bulk_Density[Layer] #'Mg/m3
         Clay_Fraction[Layer] = pSoilModelLayer.Clay_Fraction[Layer]
         volumetric_Water_Content[Layer] = pSoilState.Water_Content[DOY][Layer]
-        Soil_Mass[Layer] = Bulk_Density[Layer] * 1000. # * Layer_Thickness(Layer) #'kg/m2 in the soil layer thickness. Bulk density converted from Mg/m3 to kg/m3
+        Soil_Mass[Layer] = Bulk_Density[Layer] * 1000. * pSoilModelLayer.Layer_Thickness[Layer] #'kg/m2 in the soil layer thickness. Bulk density converted from Mg/m3 to kg/m3
         #'Initialization of pools
         pSoilState.SOM_C_Pool[DOY][Layer] = pSoilState.Soil_Organic_Carbon[DOY][Layer]
         pSoilState.SOM_N_Pool[DOY][Layer] = pSoilState.Soil_Organic_Nitrogen[DOY][Layer]

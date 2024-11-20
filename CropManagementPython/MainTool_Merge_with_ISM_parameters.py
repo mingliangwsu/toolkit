@@ -98,7 +98,7 @@ def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
     #'Soil description
     pSoilHorizen.Number_Of_Horizons = int(get_excel_value(Cells,'A17'))
     for i in range(1, pSoilHorizen.Number_Of_Horizons+1):
-        pSoilHorizen.Horizon_Thickness[i] = float(Cells.iloc[22 + i - 1, 3 - 1]) #'Thickness is rounded to one decimal
+        pSoilHorizen.Horizon_Thickness[i] = float(Cells.iloc[22 + i - 1, 3 - 1]) #round(float(Cells.iloc[22 + i - 1, 3 - 1]),1) #'Thickness is rounded to one decimal
         pSoilHorizen.Clay[i] = float(Cells.iloc[22 + i - 1, 4 - 1])
         pSoilHorizen.Silt[i] = float(Cells.iloc[22 + i - 1, 5 - 1])
         pSoilHorizen.Sand[i] = float(Cells.iloc[22 + i - 1, 6 - 1])
@@ -313,8 +313,8 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     Cumulative_N_Leaching = 0
     
     Percent_Sand = pSoilHorizen.Sand[1]
-    Thickness_Evaporative_Layer = round(-0.001 * Percent_Sand + 0.169, 2)
-    pSoilModelLayer.Layer_Thickness[1] = Thickness_Evaporative_Layer           #Check!!!
+    Thickness_Evaporative_Layer = round(-0.001 * Percent_Sand + 0.169, 1)
+    pSoilModelLayer.Layer_Thickness[1] = Thickness_Evaporative_Layer           #TODO 11/15/2024LML High risk since the soil properties already initialized with default layer depth
     #'Set simulation period accumulators to zero
     pSoilFlux.Simulation_Total_N_Leaching = 0
     pSoilFlux.Simulation_Total_Deep_Drainage = 0
@@ -337,8 +337,8 @@ def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs,
     CropSumColumns_data = {
         "Cumulative Deep Drainage(mm)": pSoilFlux.Cumulative_Deep_Drainage,
         "Cumulative N Leaching (kg/ha)": pSoilFlux.Cumulative_N_Leaching,
-        "Cumulative mineralization, 0.0 m - 0.3 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop[Crop_Number],
-        "Cumulative mineralization, 0.3 m - 0.6 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop[Crop_Number],
+        "Cumulative mineralization, 0.0 m - 0.3 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop[Crop_Number] * 10000, #'Convert kg/m2 to kg/ha
+        "Cumulative mineralization, 0.3 m - 0.6 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop[Crop_Number] * 10000, #'Convert kg/m2 to kg/ha
         "Residual soil profile nitrate (kg/ha)": Profile_Nitrate_Content * 10000., # 'Convert kg/m2 to kg/ha,
         "Residual soil profile ammonium (kg/ha)": Profile_Ammonium_Content * 10000, # 'Convert kg/m2 to kg/ha,
         "Cumulative irrigation (mm)": pSoilFlux.Cumulative_Irrigation,
@@ -349,10 +349,73 @@ def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs,
         "Seasonal Actual Biomass (kg/ha)": pCropState.Seasonal_Biomass * 10000 # 'Convert kg/m2 to kg/ha
     }
     CropSumOutputs[Crop_Number].loc[len(CropSumOutputs[Crop_Number])] = CropSumColumns_data
-        
-        
     
+def WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs, 
+                       pCropState, pETState):
+    CropOutRow = {
+        "DAE": DAE,
+        "DOY": DOY,
+        "Pot Green Canopy Cover": pCropState.Potential_Green_Canopy_Cover[DOY],
+        "Pot crop Transpiration (mm/day)": pETState.Potential_Crop_Transpiration[DOY],
+        "Pot Biomass (kg/ha)": pCropState.Cumulative_Potential_Crop_Biomass[DOY] * 10000, #'Convert kg/m2 to kg/ha,
+        "Green Canopy Cover": pCropState.Green_Canopy_Cover[DOY],
+        "Biomass (kg/ha)": pCropState.Cumulative_Crop_Biomass[DOY] * 10000, #'Convert kg/m2 to kg/ha,
+        "Transpiration (mm)": pETState.Actual_Transpiration[DOY],
+        "Soil Evap (mm)": pETState.Actual_Soil_Water_Evaporation[DOY],
+        "Root Depth (m)": pCropState.Root_Depth[DOY],
+        "Height (m)": pCropState.Crop_Height[DOY],
+        "Max N Conc (kg/kg)": pCropState.Maximum_N_Concentration[DOY],
+        "Crit N Conc (kg/kg)": pCropState.Critical_N_Concentration[DOY],
+        "Min N Conc (kg/kg)": pCropState.Minimum_N_Concentration[DOY],
+        "Crop N Conc (kg/kg)": pCropState.Crop_N_Concentration[DOY],
+        "Crop N Mass (kg/ha)": pCropState.Crop_N_Mass[DOY] * 10000, #'Convert kg/m2 to kg/ha
+        "N Uptake (kg/ha)": pCropState.Cumulative_N_Uptake[DOY] * 10000, #'Convert kg/m2 to kg/ha
+        "Crop WSI (0-1)": pETState.Water_Stress_Index[DOY],
+        "Crop NSI (0-1)": pCropState.Nitrogen_Stress_Index[DOY]
+    }
+    CropOutputs[Crop_Number].loc[len(CropOutputs[Crop_Number])] = CropOutRow
+        
+def WriteCropSoilOutput(Crop_Number, DOY, DAE, SoilLayers, SoilOutputs, 
+                       pCropState, pSoilFlux):
+    SoilOutRow = dict()
+    SoilOutRow["DAE"] = DAE
+    SoilOutRow["DOY"] = DOY
+    for i in range(1,SoilLayers + 1):
+        SoilOutRow[f'Water (m/m) L{i}'] = pSoilState.Water_Content[DOY][i]
+        SoilOutRow[f'NO3-N (kg/ha) L{i}'] = pSoilState.Nitrate_N_Content[DOY][i] * 10000 #'Convert kg/m2 to kg/ha
+        SoilOutRow[f'NH4-N (kg/ha) L{i}'] = pSoilState.Ammonium_N_Content[DOY][i] * 10000 #'Convert kg/m2 to kg/ha
+    for i in range(1,7):
+        SoilOutRow[f'Mineralized-N (kg/ha) L{i}'] = pSoilFlux.Layer_Mineralization[DOY][i] * 10000 #'Convert kg/m2 to kg/ha
     
+    if Crop_Number != 0:
+        SoilOutputs[Crop_Number].loc[len(SoilOutputs[Crop_Number])] = SoilOutRow
+    
+def WriteTotalSimPeriodOutput(TotalSimPeriodOutput, RunLastDOY, 
+                              SoilLayers, pSoilState, pSoilFlux):
+    Profile_Nitrate_Content = 0
+    Profile_Ammonium_Content = 0
+    Last_Simulation_DOY = RunLastDOY - 1
+    for i in range(1, SoilLayers + 1):
+        Profile_Nitrate_Content += pSoilState.Nitrate_N_Content[Last_Simulation_DOY - 1][i]
+        Profile_Ammonium_Content += pSoilState.Ammonium_N_Content[Last_Simulation_DOY - 1][i]
+    TotalSimPeriodRow = {
+        "Cumulative Deep Drainage(mm)": pSoilFlux.Simulation_Total_Deep_Drainage,
+        "Cumulative N Leaching (kg/ha)": pSoilFlux.Simulation_Total_N_Leaching,
+        "Cumulative mineralization, 0.0 m - 0.3 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_All_Days * 10000, # 'Convert kg/m2 to kg/ha,
+        "Cumulative mineralization, 0.3 m - 0.6 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_All_Days * 10000, # 'Convert kg/m2 to kg/ha,
+        "Residual soil profile nitrate (kg/ha)": Profile_Nitrate_Content * 10000, #  'Convert kg/m2 to kg/ha
+        "Residual soil profile ammonium (kg/ha)": Profile_Ammonium_Content * 10000, #  'Convert kg/m2 to kg/ha
+        "Cumulative irrigation (mm)": pSoilFlux.Simulation_Total_Irrigation,
+        "Cumulative N fertilization (kg/ha)": pSoilFlux.Simulation_Total_Fertilization * 10000 #  'Convert kg/m2 to kg/ha
+        }
+    TotalSimPeriodOutput.loc[len(TotalSimPeriodOutput)] = TotalSimPeriodRow
+
+
+
+
+
+
+
 #Main
 #get file
 data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_11022024'
@@ -379,7 +442,7 @@ Irrigation_Method = get_excel_value(InputCells,'B12')
 Water_Source = int(get_excel_value(InputCells,'C12'))                          #1: River 2: Canal 3: Groundwater
 Water_N_Conc = float(get_excel_value(InputCells,'D12'))
 
-ISM_cropnames = {'Triticale': 'Triticale (for forage)','Silage corn': 'Corn (silage)'}  #TODO
+ISM_cropnames = {'Triticale': 'Triticale (for forage)','Silage Corn': 'Corn (silage)'}  #TODO
 
 field_lat = 45.97
 field_lon = -119.26
@@ -441,7 +504,7 @@ for crop in range(1,Number_Of_Crops + 1):
         CropNames[crop] = get_excel_value(InputCells,'A39')
         col_letter = 'L'  #crop paramater value column
         crop_row_index = 39
-        
+    ISM_cropname = ISM_cropnames[CropNames[crop]]
     CropGrowths[crop] = CropGrowth()
     CropParamaters[crop] = CropParameter()
     
@@ -588,7 +651,7 @@ TotalSimPeriodColumns = {
     "Cumulative N fertilization (kg/ha)": "float64",
     }
 
-TotalSimPeriod = pd.DataFrame({col: pd.Series(dtype=dt) for col, dt in TotalSimPeriodColumns.items()})
+TotalSimPeriodOutput = pd.DataFrame({col: pd.Series(dtype=dt) for col, dt in TotalSimPeriodColumns.items()})
 
 #Irrigation N concentration
 #WaterNConc = float(get_excel_value(InputCells,'D12'))
@@ -728,14 +791,14 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
 
     if Crop_Number == 1 and (DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY):
         Crop_Active = False
-        Crop_Number = 0
-        DAE = 0
+        #Crop_Number = 0
+        #DAE = 0
         pSoilState.Auto_Irrigation = False
 
     if Crop_Number == 2 and DOY == CropGrowths[2].Maturity_DOY:
         Crop_Active = False
-        Crop_Number = 0
-        DAE = 0
+        #Crop_Number = 0
+        #DAE = 0
         pSoilState.Auto_Irrigation = False
 
 
@@ -783,56 +846,32 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
                 pETState,pCS_Fertilization,pCropState)
     
     #'Write Daily and summary Outputs by crop number at harvest time
-    #CropOutput
-    CropOutRow = {
-        "DAE": DAE,
-        "DOY": DOY,
-        "Pot Green Canopy Cover": pCropState.Potential_Green_Canopy_Cover[DOY],
-        "Pot crop Transpiration (mm/day)": pETState.Potential_Crop_Transpiration[DOY],
-        "Pot Biomass (kg/ha)": pCropState.Cumulative_Potential_Crop_Biomass[DOY] * 10000, #'Convert kg/m2 to kg/ha,
-        "Green Canopy Cover": pCropState.Green_Canopy_Cover[DOY],
-        "Biomass (kg/ha)": pCropState.Cumulative_Crop_Biomass[DOY] * 10000, #'Convert kg/m2 to kg/ha,
-        "Transpiration (mm)": pETState.Actual_Transpiration[DOY],
-        "Soil Evap (mm)": pETState.Actual_Soil_Water_Evaporation[DOY],
-        "Root Depth (m)": pCropState.Root_Depth[DOY],
-        "Height (m)": pCropState.Crop_Height[DOY],
-        "Max N Conc (kg/kg)": pCropState.Maximum_N_Concentration[DOY],
-        "Crit N Conc (kg/kg)": pCropState.Critical_N_Concentration[DOY],
-        "Min N Conc (kg/kg)": pCropState.Minimum_N_Concentration[DOY],
-        "Crop N Conc (kg/kg)": pCropState.Crop_N_Concentration[DOY],
-        "Crop N Mass (kg/ha)": pCropState.Crop_N_Mass[DOY] * 10000, #'Convert kg/m2 to kg/ha
-        "N Uptake (kg/ha)": pCropState.Cumulative_N_Uptake[DOY] * 10000, #'Convert kg/m2 to kg/ha
-        "Crop WSI (0-1)": pETState.Water_Stress_Index[DOY],
-        "Crop NSI (0-1)": pCropState.Nitrogen_Stress_Index[DOY]
-    }
-    if Crop_Number != 0:
-        CropOutputs[Crop_Number].loc[len(CropOutputs[Crop_Number])] = CropOutRow
-    #SoilOutput
-    SoilOutRow = dict()
-    SoilOutRow["DAE"] = DAE
-    SoilOutRow["DOY"] = DOY
-    for i in range(1,SoilLayers + 1):
-        SoilOutRow[f'Water (m/m) L{i}'] = pSoilState.Water_Content[DOY][i]
-        SoilOutRow[f'NO3-N (kg/ha) L{i}'] = pSoilState.Nitrate_N_Content[DOY][i] * 10000 #'Convert kg/m2 to kg/ha
-        SoilOutRow[f'NH4-N (kg/ha) L{i}'] = pSoilState.Ammonium_N_Content[DOY][i] * 10000 #'Convert kg/m2 to kg/ha
-    for i in range(1,7):
-        SoilOutRow[f'Mineralized-N (kg/ha) L{i}'] = pSoilFlux.Layer_Mineralization[DOY][i] * 10000 #'Convert kg/m2 to kg/ha
     
-    if Crop_Number != 0:
-        SoilOutputs[Crop_Number].loc[len(SoilOutputs[Crop_Number])] = SoilOutRow
+    if Crop_Active and DOY != CropGrowths[Crop_Number].Harvest_DOY:
+        #CropOutput
+        WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs, pCropState, pETState)
+        #SoilOutput
+        WriteCropSoilOutput(Crop_Number, DOY, DAE, SoilLayers, SoilOutputs, 
+                               pCropState, pSoilFlux)
     
     
     #SummaryOutput
-    if DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY:
+    #if DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY:
+    if Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY:
         WriteCropSummaryOutput(1, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
                                pETState)
-    if DOY == CropGrowths[2].Maturity_DOY:
+    if Crop_Number == 2 and DOY == CropGrowths[2].Maturity_DOY:
         WriteCropSummaryOutput(2, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
                                pETState)
-
-
+        
+        
+    if (Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY) or \
+       (Crop_Number == 2 and DOY == CropGrowths[2].Harvest_DOY):
+        Crop_Number = 0
+        DAE = 0
+        
         
     if Crop_Active: 
         DAE += 1
@@ -842,35 +881,11 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
         Year_Number += 1
     Days_Elapsed += 1
 
+WriteTotalSimPeriodOutput(TotalSimPeriodOutput, Run_Last_Doy, SoilLayers, 
+                          pSoilState, pSoilFlux)
 
 for crop in range(1,Number_Of_Crops + 1):
     CropOutputs[crop].to_csv(f'{output_path}/crop_{crop}_{crop_output_excel_csv}',index=False)
     SoilOutputs[crop].to_csv(f'{output_path}/crop_{crop}_{soil_output_excel_csv}',index=False)
-    CropSumOutputs[crop].to_csv(f'{output_path}/crop_{crop}_cromsum.csv',index=False)
-    
-
-
-def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs, 
-                       pSoilFlux, pSoilState, pSoilModelLayer, 
-                       pETState):
-    Profile_Nitrate_Content = 0.
-    Profile_Ammonium_Content = 0.
-    for i in range(1, pSoilModelLayer.Number_Model_Layers + 1):
-        Profile_Nitrate_Content += pSoilState.Nitrate_N_Content[DOY - 1][i]
-        Profile_Ammonium_Content += pSoilState.Ammonium_N_Content[DOY - 1][i]
-
-    CropSumColumns_data = {
-        "Cumulative Deep Drainage(mm)": pSoilFlux.Cumulative_Deep_Drainage,
-        "Cumulative N Leaching (kg/ha)": pSoilFlux.Cumulative_N_Leaching,
-        "Cumulative mineralization, 0.0 m - 0.3 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop[Crop_Number],
-        "Cumulative mineralization, 0.3 m - 0.6 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop[Crop_Number],
-        "Residual soil profile nitrate (kg/ha)": Profile_Nitrate_Content * 10000., # 'Convert kg/m2 to kg/ha,
-        "Residual soil profile ammonium (kg/ha)": Profile_Ammonium_Content * 10000, # 'Convert kg/m2 to kg/ha,
-        "Cumulative irrigation (mm)": pSoilFlux.Cumulative_Irrigation,
-        "Cumulative N fertilization (kg/ha)": pSoilFlux.Cumulative_Fertilization * 10000, #'Convert kg/m2 to kg/ha,
-        "Seasonal Transpiration (mm)": pETState.Total_Transpiration,
-        "Seasonal N Uptake (kg/ha)": pCropState.Seasonal_N_Uptake * 10000, # 'Convert kg/m2 to kg/ha ,
-        "Seasonal Potential Biomass (kg/ha)": pCropState.Cumulative_Potential_Crop_Biomass * 10000, # 'Convert kg/m2 to kg/ha,
-        "Seasonal Actual Biomass (kg/ha)": pCropState.Seasonal_Biomass * 10000 # 'Convert kg/m2 to kg/ha
-    }
-    CropSumOutputs[Crop_Number].loc[len(CropSumOutputs[Crop_Number])] = CropSumColumns_data
+    CropSumOutputs[crop].T.reset_index().to_csv(f'{output_path}/crop_{crop}_CropSum.csv',index=False,header=True)
+TotalSimPeriodOutput.T.reset_index().to_csv(f'{output_path}/TotalSimPeriodOutput.csv',index=False,header=True)

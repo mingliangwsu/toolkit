@@ -123,11 +123,11 @@ class SoilFlux:
     Cumulative_Deep_Drainage = 0.
     Cumulative_N_Leaching = 0.
     Sum_N_Fertilization = 0.
+    Cumulative_Irrigation = 0.
+    Cumulative_Fertilization = 0.
     
     Simulation_Total_N_Leaching = 0.
     Simulation_Total_Deep_Drainage = 0.
-    Cumulative_Irrigation = 0.
-    Cumulative_Fertilization = 0.
     Simulation_Total_Irrigation = 0.
     Simulation_Total_Fertilization = 0.
 
