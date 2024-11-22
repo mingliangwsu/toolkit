@@ -180,7 +180,7 @@ def NitrogenUptake_OBSOLETE(DOY, pCropState, pCropParameter, pCropGrowth, pETSta
         Root_Fraction[layer] = pETState.Root_Fraction[layer]
         Soil_NO3_Mass[layer] = pSoilState.Nitrate_N_Content[DOY][layer]
         Soil_NH4_Mass[layer] = pSoilState.Ammonium_N_Content[DOY][layer]
-        if Soil_NO3_Mass[layer] == 0 and Soil_NH4_Mass[layer] == 0:
+        if Soil_NO3_Mass[layer] <= 1e-12 and Soil_NH4_Mass[layer] <= 1e-12:
             Nitrate_Mass_Fraction[layer] = 0
             Ammonium_Mass_Fraction[layer] = 0
         else:
@@ -307,7 +307,7 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
                 Maximum_Active_N_Uptake = 0.
         Soil_Solution_N_Conc[Layer] = (Soil_NO3_Mass[Layer] + Soil_NH4_Mass[Layer]) / (Water_Content * Water_Density * Layer_Thickness) #'kg/kg   [NO3] + [NH4] added for active uptake
         
-        #'Hard-Coded Parameters
+        #'Hard-Coded Parameters for Michaelis-Menten for relative active uptake (0 to 1) based on the soil solution N concentration
         Min_Conc_For_Active_Uptake = 0.00005
         Km = 0.00005
         if Soil_Solution_N_Conc[Layer] < Min_Conc_For_Active_Uptake:
@@ -320,7 +320,7 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
         if Active_N_Uptake[Layer] > Available_For_Active_Uptake: Active_N_Uptake[Layer] = Available_For_Active_Uptake
         #'Update Soil N
         Layer_Active_NH4_N_Uptake[Layer] = min(Active_N_Uptake[Layer], Soil_NH4_Mass[Layer])
-        Layer_Active_NO3_N_Uptake[Layer] = Active_N_Uptake[Layer] - Layer_Active_NH4_N_Uptake[Layer]
+        Layer_Active_NO3_N_Uptake[Layer] = max(0.,Active_N_Uptake[Layer] - Layer_Active_NH4_N_Uptake[Layer])
 
     
     Today_N_Uptake = 0.

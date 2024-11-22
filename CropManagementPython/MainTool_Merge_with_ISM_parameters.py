@@ -312,9 +312,9 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     Cumulative_Deep_Drainage = 0
     Cumulative_N_Leaching = 0
     
-    Percent_Sand = pSoilHorizen.Sand[1]
-    Thickness_Evaporative_Layer = round(-0.001 * Percent_Sand + 0.169, 1)
-    pSoilModelLayer.Layer_Thickness[1] = Thickness_Evaporative_Layer           #TODO 11/15/2024LML High risk since the soil properties already initialized with default layer depth
+    #Percent_Sand = pSoilHorizen.Sand[1]
+    #Thickness_Evaporative_Layer = round(-0.001 * Percent_Sand + 0.169, 1)
+    #pSoilModelLayer.Layer_Thickness[1] = Thickness_Evaporative_Layer           #TODO 11/15/2024LML High risk since the soil properties already initialized with default layer depth
     #'Set simulation period accumulators to zero
     pSoilFlux.Simulation_Total_N_Leaching = 0
     pSoilFlux.Simulation_Total_Deep_Drainage = 0
@@ -351,7 +351,7 @@ def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs,
     CropSumOutputs[Crop_Number].loc[len(CropSumOutputs[Crop_Number])] = CropSumColumns_data
     
 def WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs, 
-                       pCropState, pETState):
+                       pCropState, pETState, pSoilState):
     CropOutRow = {
         "DAE": DAE,
         "DOY": DOY,
@@ -371,7 +371,8 @@ def WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs,
         "Crop N Mass (kg/ha)": pCropState.Crop_N_Mass[DOY] * 10000, #'Convert kg/m2 to kg/ha
         "N Uptake (kg/ha)": pCropState.Cumulative_N_Uptake[DOY] * 10000, #'Convert kg/m2 to kg/ha
         "Crop WSI (0-1)": pETState.Water_Stress_Index[DOY],
-        "Crop NSI (0-1)": pCropState.Nitrogen_Stress_Index[DOY]
+        "Crop NSI (0-1)": pCropState.Nitrogen_Stress_Index[DOY],
+        "PAW Depletion (0-1)": pSoilState.PAW_Depletion[DOY]
     }
     CropOutputs[Crop_Number].loc[len(CropOutputs[Crop_Number])] = CropOutRow
         
@@ -418,7 +419,7 @@ def WriteTotalSimPeriodOutput(TotalSimPeriodOutput, RunLastDOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_11022024'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_11152024'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -569,7 +570,8 @@ CropColums = {
     "Crop N Mass (kg/ha)": "float64",
     "N Uptake (kg/ha)": "float64",
     "Crop WSI (0-1)": "float64",
-    "Crop NSI (0-1)": "float64"
+    "Crop NSI (0-1)": "float64",
+    "PAW Depletion (0-1)": "float64"
     }
 
 CropOutputs = dict()
@@ -650,8 +652,16 @@ TotalSimPeriodColumns = {
     "Cumulative irrigation (mm)": "float64",
     "Cumulative N fertilization (kg/ha)": "float64",
     }
-
 TotalSimPeriodOutput = pd.DataFrame({col: pd.Series(dtype=dt) for col, dt in TotalSimPeriodColumns.items()})
+
+#RECORD FOR FEILD Irigation & Fertilization events
+FieldManagementsLogs = {
+    "DOY": "int32",
+    "Crop": "int32",
+    "Irrigation (mm)": "float64",
+    "Fertilizer (kg/ha)": "float64"
+    }
+FieldManagementsLogsOutput = pd.DataFrame({col: pd.Series(dtype=dt) for col, dt in FieldManagementsLogs.items()})
 
 #Irrigation N concentration
 #WaterNConc = float(get_excel_value(InputCells,'D12'))
@@ -831,16 +841,27 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
                     pSoilModelLayer,pSoilState)
     Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux)
     Nitrification(DOY,pSoilModelLayer,pSoilState,pSoilFlux)
-    WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, 
-                       Water_N_Conc, 
-                       pCS_Weather.Precipitation[DOY], 
-                       pCS_Fertilization.Nitrate_Fertilization_Rate[DOY], 
-                       pCS_Fertilization.Ammonium_Fertilization_Rate[DOY], 
-                       pCS_Fertilization.Nitrate_Fraction[DOY], 
-                       AutoIrrigations, 
-                       pSoilFlux, 
-                       Crop_Active,
-                       pETState)
+    
+    net_irrigation_today,fertilizer_today = \
+        WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, 
+                           Water_N_Conc, 
+                           pCS_Weather.Precipitation[DOY], 
+                           pCS_Fertilization.Nitrate_Fertilization_Rate[DOY], 
+                           pCS_Fertilization.Ammonium_Fertilization_Rate[DOY], 
+                           pCS_Fertilization.Nitrate_Fraction[DOY], 
+                           AutoIrrigations, 
+                           pSoilFlux, 
+                           Crop_Active,
+                           pETState)
+    
+    #output managements
+    if net_irrigation_today >= 1e-12 or fertilizer_today >=1e-12:
+        FieldManagementsLogsOutput.loc[len(FieldManagementsLogsOutput)] = {
+            "DOY": DOY,
+            "Crop": Crop_Number,
+            "Irrigation (mm)": net_irrigation_today,
+            "Fertilizer (kg/ha)": fertilizer_today * 10000 #  'Convert kg/m2 to kg/ha
+            }
     
     BalancesAll(DOY,pBalance,pSoilState,pSoilFlux,pSoilModelLayer,pCS_Weather,
                 pETState,pCS_Fertilization,pCropState)
@@ -849,7 +870,8 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
     
     if Crop_Active and DOY != CropGrowths[Crop_Number].Harvest_DOY:
         #CropOutput
-        WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs, pCropState, pETState)
+        WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs, pCropState, 
+                        pETState, pSoilState)
         #SoilOutput
         WriteCropSoilOutput(Crop_Number, DOY, DAE, SoilLayers, SoilOutputs, 
                                pCropState, pSoilFlux)
@@ -857,10 +879,12 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
     
     #SummaryOutput
     #if DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY:
-    if Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY:
+    #if Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY: output cumulations before harvest day
+    if DOY == max(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY):
         WriteCropSummaryOutput(1, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
                                pETState)
+        #Crop_Number = 0
     if Crop_Number == 2 and DOY == CropGrowths[2].Maturity_DOY:
         WriteCropSummaryOutput(2, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
@@ -889,3 +913,4 @@ for crop in range(1,Number_Of_Crops + 1):
     SoilOutputs[crop].to_csv(f'{output_path}/crop_{crop}_{soil_output_excel_csv}',index=False)
     CropSumOutputs[crop].T.reset_index().to_csv(f'{output_path}/crop_{crop}_CropSum.csv',index=False,header=True)
 TotalSimPeriodOutput.T.reset_index().to_csv(f'{output_path}/TotalSimPeriodOutput.csv',index=False,header=True)
+FieldManagementsLogsOutput.to_csv(f'{output_path}/FieldManagementLogs.csv',index=False)

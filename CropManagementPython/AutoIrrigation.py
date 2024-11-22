@@ -63,7 +63,7 @@ def SetAutoIrrigation(DOY, PAW, CWSI, NL, MAD, MA_CWSI, Refill, Refill_Depth,
                       pSoilState, pETState, pSoilModelLayer):
     Water_Density = 1000 #'kg/m3
     if PAW: 
-        PAW_Depletion = 0.
+        PAW_Depletion_Today = 0.
         Water_Depth_To_Refill = 0.
         for Layer in range(1, NL + 1):
             FC = pSoilModelLayer.FC_Water_Content[Layer]
@@ -71,12 +71,15 @@ def SetAutoIrrigation(DOY, PAW, CWSI, NL, MAD, MA_CWSI, Refill, Refill_Depth,
             WC = pSoilState.Water_Content[DOY][Layer]
             
             Layer_Root_Fraction = pETState.Root_Fraction[Layer]
-            PAW_Depletion += (1 - (WC - PWP) / (FC - PWP)) * Layer_Root_Fraction
+            PAW_Depletion_Today += (1 - (WC - PWP) / (FC - PWP)) * Layer_Root_Fraction
+            pSoilState.PAW_Depletion[DOY] = PAW_Depletion_Today
             Water_Depth_To_Refill += (FC - WC) * Water_Density * pSoilModelLayer.Layer_Thickness[Layer]
-            if Layer > 1 and Layer_Root_Fraction == 0: Layer = NL #'All layers with roots plus one extra layers are refilled. Leave the loop
+            #print(f'Layer:{Layer} Layer_Root_Fraction:{Layer_Root_Fraction}')
+            if Layer > 1 and Layer_Root_Fraction <= 1e-12: break #'All layers with roots plus one extra layers are refilled. Leave the loop
 
-        if PAW_Depletion > MAD:
+        if PAW_Depletion_Today > MAD:
             Irrigation_Today = Water_Depth_To_Refill
+            #print(f'DOY:{DOY} Irrigation_Today:{Irrigation_Today}')
         else:
             Irrigation_Today = 0
 
@@ -90,7 +93,7 @@ def SetAutoIrrigation(DOY, PAW, CWSI, NL, MAD, MA_CWSI, Refill, Refill_Depth,
                 WC = pSoilState.Water_Content[DOY][Layer]
                 
                 Water_Depth_To_Refill += (FC - WC) * Water_Density * pSoilModelLayer.Layer_Thickness[Layer]
-                if Layer > 1 and Layer_Root_Fraction == 0: Layer = NL #'All layers with roots plus one extra layers are refilled. Leave the loop
+                if Layer > 1 and Layer_Root_Fraction <= 1e-12: break #'All layers with roots plus one extra layers are refilled. Leave the loop
             Irrigation_Today = Water_Depth_To_Refill
 
     if Refill:
@@ -104,7 +107,7 @@ def SetAutoIrrigation(DOY, PAW, CWSI, NL, MAD, MA_CWSI, Refill, Refill_Depth,
             Wetted_Depth += pSoilModelLayer.Layer_Thickness[Layer]
             if Wetted_Depth > Refill_Depth:
                 Irrigation_Today = Water_Depth_To_Refill
-                Layer = NL
+                break
     return Irrigation_Today
 
 

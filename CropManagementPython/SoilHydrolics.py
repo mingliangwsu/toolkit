@@ -66,6 +66,9 @@ class SoilState:
     Residue_N_Pool = dict() #(366, 20) As Double
     Profile_Nitrate_N_Content = dict() #(366) As Double
     Profile_Ammonium_N_Content = dict() #(366) As Double
+    
+    PAW_Depletion = dict() #(366)
+    
     #N_Leaching = dict() #(365) As Double
     #Deep_Drainage = dict() #(365) As Double
     #Chemical_Balance = dict() #(365) As Double
@@ -123,7 +126,7 @@ class SoilFlux:
     Cumulative_Deep_Drainage = 0.
     Cumulative_N_Leaching = 0.
     Sum_N_Fertilization = 0.
-    Cumulative_Irrigation = 0.
+    Cumulative_Irrigation = 0.                                                 #only account when crop is active
     Cumulative_Fertilization = 0.
     
     Simulation_Total_N_Leaching = 0.
@@ -168,6 +171,7 @@ def InitSoilState(pSoilState):
             pSoilState.Residue_C_Pool[i][j] = 0.
             pSoilState.Residue_N_Pool[i][j] = 0.
             
+        pSoilState.PAW_Depletion[i] = 0.
         pSoilState.Profile_Nitrate_N_Content[i] = 0.
         pSoilState.Profile_Ammonium_N_Content[i] = 0.
         #pSoilState.N_Leaching[i] = 0.
@@ -434,6 +438,7 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
     #k & Q !!!
     k = 0
     Q = 0
+    #print(f'Number_Of_Pulses:{Number_Of_Pulses} Water_Flux_In:{Water_Flux_In} Water_Depth_Equivalent_Of_One_Pore_Volume:{Water_Depth_Equivalent_Of_One_Pore_Volume}')
     
     for i in range(1, Number_Of_Pulses + 1):
         Win = Water_Flux_In / Number_Of_Pulses
@@ -511,6 +516,8 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
     pSoilFlux.Simulation_Total_N_Leaching += Chemical_Leaching * 10000 #'Convert kg/m2 to kg/ha
     pSoilFlux.Simulation_Total_Irrigation += NID
     pSoilFlux.Simulation_Total_Fertilization += Nitrate_N_Fertilization + Ammonium_N_Fertilization
+    
+    return NID,(Nitrate_N_Fertilization + Ammonium_N_Fertilization)
 
 def SoilTemperature(DOY,Max_Air_Temperature,Min_Air_Temperature,pSoilModelLayer,pSoilState):
     Constant_Pi = 3.141592654
@@ -674,7 +681,7 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
         Sum_Root_Fraction_Adjustment += Layer_Root_Fraction_Adjustment[i]
     
     for i in range(2, Number_Of_Soil_Layers + 1):
-        if Sum_Root_Fraction_Adjustment == 0:
+        if Sum_Root_Fraction_Adjustment <= 1e-12:
             pETState.Adjusted_Root_Fraction[i] = 0
             Layer_Plant_Hydraulic_Conductance[i] = 0
         else:
@@ -687,7 +694,7 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
         Average_Soil_WP += Soil_WP[i] * pETState.Adjusted_Root_Fraction[i]
     
     #'Calculate leaf water potential
-    if Plant_Hydraulic_Conductance == 0: 
+    if Plant_Hydraulic_Conductance <= 1e-12: 
         Leaf_Water_Pot = LeafWP_Wilt
     else:
         Leaf_Water_Pot = Average_Soil_WP - Today_Expected_Crop_Water_Uptake / Plant_Hydraulic_Conductance
