@@ -77,9 +77,10 @@ def SetAutoIrrigation(DOY, PAW, CWSI, NL, MAD, MA_CWSI, Refill, Refill_Depth,
             #print(f'Layer:{Layer} Layer_Root_Fraction:{Layer_Root_Fraction}')
             if Layer > 1 and Layer_Root_Fraction <= 1e-12: break #'All layers with roots plus one extra layers are refilled. Leave the loop
 
+        #print(f'DOY:{DOY} PAW_Depletion_Today:{PAW_Depletion_Today} MAD:{MAD}')
         if PAW_Depletion_Today > MAD:
             Irrigation_Today = Water_Depth_To_Refill
-            #print(f'DOY:{DOY} Irrigation_Today:{Irrigation_Today}')
+            #print(f'DOY:{DOY} Irrigation_Today:{Irrigation_Today} PAW_Depletion_Today:{PAW_Depletion_Today}')
         else:
             Irrigation_Today = 0
 

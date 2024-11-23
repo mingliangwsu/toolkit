@@ -13,7 +13,7 @@ from ExcelDataframeExchange import *
 from CropParameter import *
 from SoilHydrolics import *
 from Crop import *
-from canopycover import *
+#from canopycover import *
 #from CS_ET import *
 from accessagweathernet import *
 from ism_default_parameters import *
@@ -22,6 +22,8 @@ from accessssurgo_functions import *
 from Balances import *
 from AutoIrrigation import *
 from OrganicCandN import *
+
+import sys
 
 def is_blank(s):
     return not s or not s.strip()
@@ -132,8 +134,10 @@ def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen):
             pSoilHorizen.Sat_WC[i] = float(df_SSURGO.loc[i-1, 'wsatiated_r']) / 100.0
         if is_blank(df_SSURGO.loc[i-1, 'om_r']):
             pSoilHorizen.Soil_Organic_Carbon[i] = 0.0
+            pSoilHorizen.Percent_Soil_Organic_Matter[i] = 0.0
         else:
             pSoilHorizen.Soil_Organic_Carbon[i] = float(df_SSURGO.loc[i-1, 'om_r'])
+            pSoilHorizen.Percent_Soil_Organic_Matter[i] = pSoilHorizen.Soil_Organic_Carbon[i]
         if is_blank(df_SSURGO.loc[i-1, 'dbthirdbar_r']):
             pSoilHorizen.Bulk_Dens[i] = -9999.0
         else:
@@ -224,15 +228,17 @@ def ReadWeather(Cells,pCS_Weather):
         
 def U2WindSpeed(ws_m_s,AnemomH_m):
     return ws_m_s * 4.87 / (math.log(67.8 * AnemomH_m - 5.42))
-def GetAgWeatherNetDailyWeather(stationid,AnemomH_m,year,stdoy,eddoy,pCS_Weather):
+def GetAgWeatherNetDailyWeather(stationid,AnemomH_m,styear,stdoy,edyear, eddoy,pCS_Weather):
     #get agWeather daily climate data
-    sy,sm,sd = get_date_from_YDOY(year,stdoy)
-    ey,em,ed = get_date_from_YDOY(year,eddoy)
+    sy,sm,sd = get_date_from_YDOY(styear,stdoy)
+    ey,em,ed = get_date_from_YDOY(edyear,eddoy)
     start_date = f'{sy}-{sm:02}-{sd:02}'
     end_date = f'{ey}-{em:02}-{ed:02}'
     data = fetch_AgWeatherNet_data(stationid,start_date,end_date,True)
+    numdays = (datetime.date(ey,em,ed) - datetime.date(sy,sm,sd)).days + 1
     good_data = True
-    if data.shape[0] == (sim_end_doy - sim_start_doy + 1):
+    validadays = 0
+    if data.shape[0] == numdays:
         for index, row in data.iterrows():
             if (row['JULDATE_PST'] != "" and
                 not math.isnan(row['SR_MJM2']) and
@@ -242,8 +248,8 @@ def GetAgWeatherNetDailyWeather(stationid,AnemomH_m,year,stdoy,eddoy,pCS_Weather
                 not math.isnan(row['MIN_REL_HUMIDITY']) and
                 not math.isnan(row['P_INCHES']) and
                 not math.isnan(row['ETO'])):
-                    date = datetime.datetime.strptime(row['JULDATE_PST'], "%Y-%m-%d").date()
-                    day_of_year = date.timetuple().tm_yday
+                    tdate = datetime.datetime.strptime(row['JULDATE_PST'], "%Y-%m-%d").date()
+                    day_of_year = tdate.timetuple().tm_yday
                     #print(f"{index} {row['JULDATE_PST']} {day_of_year}")
                     doy = int(day_of_year)
                     pCS_Weather.Solar_Radiation[doy] = row['SR_MJM2']
@@ -254,13 +260,18 @@ def GetAgWeatherNetDailyWeather(stationid,AnemomH_m,year,stdoy,eddoy,pCS_Weather
                     pCS_Weather.Wind_Speed[doy] = row['WS_MPH'] * 0.44704                  #MPH to m/s
                     pCS_Weather.Precipitation[doy] = row['P_INCHES'] * 25.4                #inch to mm
                     pCS_Weather.FAO_ETo[doy] = row['ETO'] * 25.4                           #inch to mm
+                    validadays += 1
             else:
                 good_data = False
-                print(f'Error: some climate data has nan value\n')
+                print(f'Error: {tdate.year}/{tdate.month}/{tdate.day} has NaN value!')
+        if validadays < numdays:
+            missing_days = numdays - validadays
+            good_data = False
+            print(f'Error: {missing_days} days missing climate data\n')
     else:
-        missing_days = sim_end_doy - sim_start_doy + 1 - clmdata.shape[0]
         good_data = False
-        print(f'Error: {missing_days} days missing climate data\n')
+        print(f'Error: Returned less days climate data: need {numdays} returned:{data.shape[0]}.\n')
+        #exit()
     return good_data
     
 def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLayer,pSoilHorizen,pSoilFlux):
@@ -433,6 +444,11 @@ InputCells = pd.read_csv(f'{data_path}/{fieldinput_from_excel_csv}',header=None)
 cropCells = pd.read_csv(f'{data_path}/{crop_from_excel_csv}',header=None)
 SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
 
+#user option
+soil_propertities_from_SSURGO = False
+crop_growth_parameter_from_ISM = False
+weather_from_AgWeatherNet = False
+
 #Farm and field description
 Farm_Name = get_excel_value(InputCells,'A5')
 Field_Number = int(get_excel_value(InputCells,'A6'))
@@ -453,14 +469,6 @@ AnemomH = 1.5                                                                  #
 First_DOY = int(get_excel_value(InputCells,'E5'))
 
 
-sim_year = 2023
-sim_start_doy = 100
-sim_end_doy = 300
-
-#user option
-soil_propertities_from_SSURGO = False
-crop_growth_parameter_from_ISM = False
-weather_from_AgWeatherNet = False
 
 if weather_from_AgWeatherNet:
     agWeatherStationID,dist = FindClosestStationAndDistance(field_lat,field_lon,
@@ -539,16 +547,6 @@ else:
     Maturity_DOY_2 = None
 ReadAutoIrrigation(InputCells,AutoIrrigations,DOY_Last_Scheduled_Irrigation,
                    Emergence_DOY_1,Maturity_DOY_1,Emergence_DOY_2,Maturity_DOY_2)
-
-#Weather data
-pCS_Weather = CS_Weather()
-if weather_from_AgWeatherNet == False:
-    ReadWeather(InputCells,pCS_Weather)
-else:
-    bdaily = True
-    good_data = GetAgWeatherNetDailyWeather(agWeatherStationID,AnemomH,sim_year,sim_start_doy,sim_end_doy,pCS_Weather)
-    if good_data == False:
-        print('Error: AgWeatherNet data fetch error!\n')
 
 #agWeatherStation = '100031' #McNary
 CropColums = {
@@ -707,6 +705,30 @@ if Number_Of_Crops == 1:
     Run_Last_Doy = CropGrowths[1].Harvest_DOY 
 else: 
     Run_Last_Doy = CropGrowths[2].Harvest_DOY
+    
+    
+
+#Set weather data
+sim_st_year = 2023
+sim_start_doy = Run_First_Doy
+
+sim_end_doy = Run_Last_Doy
+if sim_start_doy > sim_end_doy:
+    sim_end_year = sim_st_year + 1
+else:
+    sim_end_year = sim_start_doy
+
+#Weather data
+pCS_Weather = CS_Weather()
+if weather_from_AgWeatherNet == False:
+    ReadWeather(InputCells,pCS_Weather)
+else:
+    bdaily = True
+    good_data = GetAgWeatherNetDailyWeather(agWeatherStationID,AnemomH,sim_st_year,sim_start_doy,sim_end_year,sim_end_doy,pCS_Weather)
+    if good_data == False:
+        print('Error: AgWeatherNet data fetch error!\n')
+        sys.exit()
+    
     
 #ReadSoilInitial(Run_First_DOY,SoilInitCells,pSoilState,pSoilModelLayer)
 ReadSoilInitial(Run_First_Doy, Run_Last_Doy, SoilInitCells, pSoilState,
@@ -909,8 +931,8 @@ WriteTotalSimPeriodOutput(TotalSimPeriodOutput, Run_Last_Doy, SoilLayers,
                           pSoilState, pSoilFlux)
 
 for crop in range(1,Number_Of_Crops + 1):
-    CropOutputs[crop].to_csv(f'{output_path}/crop_{crop}_{crop_output_excel_csv}',index=False)
-    SoilOutputs[crop].to_csv(f'{output_path}/crop_{crop}_{soil_output_excel_csv}',index=False)
-    CropSumOutputs[crop].T.reset_index().to_csv(f'{output_path}/crop_{crop}_CropSum.csv',index=False,header=True)
-TotalSimPeriodOutput.T.reset_index().to_csv(f'{output_path}/TotalSimPeriodOutput.csv',index=False,header=True)
-FieldManagementsLogsOutput.to_csv(f'{output_path}/FieldManagementLogs.csv',index=False)
+    CropOutputs[crop].to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_crop_{crop}_{crop_output_excel_csv}',index=False)
+    SoilOutputs[crop].to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_crop_{crop}_{soil_output_excel_csv}',index=False)
+    CropSumOutputs[crop].T.reset_index().to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_crop_{crop}_CropSum.csv',index=False,header=True)
+TotalSimPeriodOutput.T.reset_index().to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_TotalSimPeriodOutput.csv',index=False,header=True)
+FieldManagementsLogsOutput.to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_FieldManagementLogs.csv',index=False)

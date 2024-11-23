@@ -72,7 +72,7 @@ def fetch_AgWeatherNet_data(STATION_ID,START,END,bdaily=False):
     params = {
         "UNAME": "liumingwsu",
         "PASS": "AgweatherWSU",
-        "STATION_ID": "100031"
+        "STATION_ID": str(STATION_ID)
     }
     response = requests.get(url,params=params)
     if response.status_code == 200:
