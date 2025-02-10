@@ -253,6 +253,7 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
     Active_N_Uptake = dict() #(20) As Double
     Layer_Active_NH4_N_Uptake = dict() #(20) As Double
     Layer_Active_NO3_N_Uptake = dict() #(20) As Double
+    Available_N = 0.0
 
     
     Water_Density = 1000 #'kg/m3
@@ -274,6 +275,7 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
         if Water_Uptake[Layer] > 0: Total_Water_Uptake += Water_Uptake[Layer]
         Soil_NO3_Mass[Layer] = pSoilState.Nitrate_N_Content[DOY][Layer]
         Soil_NH4_Mass[Layer] = pSoilState.Ammonium_N_Content[DOY][Layer]
+        Available_N += Soil_NO3_Mass[Layer] + Soil_NH4_Mass[Layer]
         Water_Content = pSoilState.Water_Content[DOY][Layer]
         Layer_Thickness = pSoilModelLayer.Layer_Thickness[Layer]
         Soil_Solution_N_Conc[Layer] = Soil_NO3_Mass[Layer] / (Water_Content * Water_Density * Layer_Thickness) #'kg/kg   Only nitrate considered for passive uptake
@@ -350,6 +352,8 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
         pCropState.Nitrogen_Stress_Index[DOY] = 0
     else:
         pCropState.Nitrogen_Stress_Index[DOY] = min(1, 1 - (pCropState.Crop_N_Concentration[DOY] - pCropState.Minimum_N_Concentration[DOY]) / (pCropState.Critical_N_Concentration[DOY] - pCropState.Minimum_N_Concentration[DOY]))
+        
+    return Today_Crop_N_Demand,Available_N
 
 def InitializeCrop(DOY,pCropState,pSoilFlux,pCropParameter,pETState):
     pCropState.Green_Canopy_Cover[DOY] = pCropParameter.Initial_Green_Canopy_Cover

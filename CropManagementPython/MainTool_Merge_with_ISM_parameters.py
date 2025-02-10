@@ -28,6 +28,12 @@ import sys
 def is_blank(s):
     return not s or not s.strip()
 
+def mm_to_inch(mm):
+    return mm / 25.4  # 1 inch = 25.4 mm
+
+def KgPerSquareMeter_to_KgPerHa(kg_m2):
+    return kg_m2 * 10000.0
+
 class CS_Weather:
     Solar_Radiation = dict()                                                   #MJ/m2
     Tmax = dict()                                                              #Celsius degree
@@ -422,10 +428,33 @@ def WriteTotalSimPeriodOutput(TotalSimPeriodOutput, RunLastDOY,
         }
     TotalSimPeriodOutput.loc[len(TotalSimPeriodOutput)] = TotalSimPeriodRow
 
-
-
-
-
+def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY, 
+                                          DAE, SoilLayers, 
+                                          pCropState, pSoilFlux, pETState, 
+                                          pSoilState, pCS_Weather, irrigations,
+                                          Irrigation_Recommendation,
+                                          pCS_Fertilization, Today_Crop_N_Demand, 
+                                          Available_For_Active_Uptake):
+#Items from "7-day daily budget table" of Irrigation Schedular, plus nitrogen 
+#budget
+    BudgetOutRow = dict()
+    BudgetOutRow["DAE"] = DAE
+    BudgetOutRow["DOY"] = DOY
+    BudgetOutRow["Water Use (in)"] = mm_to_inch(pETState.Actual_Transpiration[DOY] 
+                                                + pETState.Actual_Soil_Water_Evaporation[DOY])
+    BudgetOutRow["Rain and Irrig (in)"] = mm_to_inch(pCS_Weather.Precipitation[DOY] + irrigations[DOY])
+    BudgetOutRow["PAW Depletion (0-1)"] = pSoilState.PAW_Depletion[DOY]   #"Water Deficit (in)": "float64", 
+    BudgetOutRow["Irrigation_Recommendation (in)"] = mm_to_inch(Irrigation_Recommendation)
+    BudgetOutRow["Water_Stress_Index (0-1)"] = pETState.Water_Stress_Index[DOY]
+    BudgetOutRow["Today_Crop_N_Demand (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(Today_Crop_N_Demand)
+    BudgetOutRow["N Uptake (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(pCropState.N_Uptake[DOY])
+    BudgetOutRow["N Fertilization (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(pCS_Fertilization.Nitrate_Fertilization_Rate[DOY] 
+                                                                          + pCS_Fertilization.Ammonium_Fertilization_Rate[DOY])
+    BudgetOutRow["N Aailable (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(Available_For_Active_Uptake)
+    BudgetOutRow["N Deficit (kg/ha)"] = max(0.0,BudgetOutRow["Today_Crop_N_Demand (kg/ha)"] - BudgetOutRow["N Uptake (kg/ha)"])
+    BudgetOutRow["Nitrogen_Stress_Index (0-1)"] = pCropState.Nitrogen_Stress_Index[DOY]
+    DailyBudgetOutputs[Crop_Number].loc[len(DailyBudgetOutputs[Crop_Number])] = BudgetOutRow
+    
 
 
 #Main
@@ -438,6 +467,7 @@ soil_initial_excel_csv = 'Initial_Soil_Conditions.csv'
 
 crop_output_excel_csv = 'CropOutput.csv'
 soil_output_excel_csv = 'SoilOutput.csv'
+budget_output_excel_csv = 'BudgetOutput.csv'
 
 #Soil properties & Crop growth parameters
 InputCells = pd.read_csv(f'{data_path}/{fieldinput_from_excel_csv}',header=None)
@@ -448,6 +478,12 @@ SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
 soil_propertities_from_SSURGO = False
 crop_growth_parameter_from_ISM = False
 weather_from_AgWeatherNet = False
+
+#02072025LML. For irrigation recommendation, the user need select either 
+#"PAW Depletion" or "CWSI" or "Refill" 
+#The user may choose different options every time
+Irrigation_Recommendation_Option = 'PAW Depletion' # 'CWSI' 'Refill' 
+Irrigation_Recommendation_Parameter = 0.5
 
 #Farm and field description
 Farm_Name = get_excel_value(InputCells,'A5')
@@ -619,6 +655,31 @@ SoilOutputs = dict()
 for crop in range(1,Number_Of_Crops + 1):
     SoilOutputs[crop] = pd.DataFrame({col: pd.Series(dtype=dt) for col, dt in SoilColums.items()})
 
+
+#Daily Budget Outputs (From emergence to maturity)
+DailyBudgetColums = {
+    "DAE": "int32",
+    "DOY": "int32",
+    "Water Use (in)": "float64",
+    "Rain and Irrig (in)": "float64", 
+    "PAW Depletion (0-1)": "float64", 
+    "Irrigation_Recommendation (in)": "float64", 
+    "Water_Stress_Index (0-1)": "float64", 
+    "Today_Crop_N_Demand (kg/ha)": "float64",
+    "N Uptake (kg/ha)": "float64", 
+    "N Fertilization (kg/ha)": "float64",
+    "N Aailable (kg/ha)": "float64",
+    "N Deficit (kg/ha)": "float64",
+    "Nitrogen_Stress_Index (0-1)": "float64"
+    }
+
+
+
+DailyBudgetOutputs = dict()
+for crop in range(1,Number_Of_Crops + 1):
+    DailyBudgetOutputs[crop] = pd.DataFrame({col: pd.Series(dtype=dt) for col, dt in DailyBudgetColums.items()})
+
+
 #CROP OUTPUT (From emergence to maturity)
 CropSumColums = {
     "Cumulative Deep Drainage(mm)": "float64",
@@ -762,8 +823,12 @@ DOY = Run_First_Doy
 Year_Number = 1
 Crop_Number = 0
 DAE = 0
+
+Number_Of_Layers = pSoilModelLayer.Number_Model_Layers
 #'Begin time loop
 while Days_Elapsed < Number_Of_Days_To_Simulate:
+    Today_Crop_N_Demand = 0.0
+    Available_N = 0.0
     #Crop_Number = ReadInputs.CropOrder(1)
     InitialSoilProfile(DOY,pBalance,pSoilState,pSoilModelLayer)
     #'Set up Crop Number 1
@@ -849,7 +914,9 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
         ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState)
         Biomass(DOY, False, pCropState, CropParamaters[Crop_Number], 
                 pCS_Weather, pETState)
-        NitrogenUptake(DOY, pCropState, CropParamaters[Crop_Number], 
+        
+        Today_Crop_N_Demand,Available_N = \
+            NitrogenUptake(DOY, pCropState, CropParamaters[Crop_Number], 
                        CropGrowths[Crop_Number], pETState, pSoilModelLayer, 
                        pSoilState)
         #'synchronize days after emergence (DAE) and day of the year (DOY)
@@ -864,6 +931,32 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
     Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux)
     Nitrification(DOY,pSoilModelLayer,pSoilState,pSoilFlux)
     
+    
+    #02072025LML estimate the irrigation recommendations 
+    Irrigation_Recommendation = 0.0
+    #Always calculate PAW Depletion for that day
+    if Crop_Active and Irrigation_Recommendation_Option != 'PAW Depletion':
+      SetAutoIrrigation(DOY, True, False, Number_Of_Layers, 
+                            0.5, -9999, False, 
+                            -9999, pSoilState, pETState, pSoilModelLayer)
+    
+    if Crop_Active and Irrigation_Recommendation_Option == 'PAW Depletion':
+      Irrigation_Recommendation = \
+          SetAutoIrrigation(DOY, True, False, Number_Of_Layers, 
+                            Irrigation_Recommendation_Parameter, -9999, False, 
+                            -9999, pSoilState, pETState, pSoilModelLayer)
+    elif Crop_Active and Irrigation_Recommendation_Option == 'CWSI':
+      Irrigation_Recommendation = \
+          SetAutoIrrigation(DOY, False, True, Number_Of_Layers, 
+                            -9999, Irrigation_Recommendation_Parameter, False, 
+                            -9999, pSoilState, pETState, pSoilModelLayer)  
+    elif Irrigation_Recommendation_Option == 'Refill':
+      Irrigation_Recommendation = \
+          SetAutoIrrigation(DOY, False, False, Number_Of_Layers, 
+                            -9999, -9999, True, 
+                            Irrigation_Recommendation_Parameter, pSoilState, 
+                            pETState, pSoilModelLayer)  
+          
     net_irrigation_today,fertilizer_today = \
         WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, 
                            Water_N_Conc, 
@@ -897,6 +990,15 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
         #SoilOutput
         WriteCropSoilOutput(Crop_Number, DOY, DAE, SoilLayers, SoilOutputs, 
                                pCropState, pSoilFlux)
+        
+        #Budget output
+        WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY, 
+                                                  DAE, SoilLayers, 
+                                                  pCropState, pSoilFlux, pETState, 
+                                                  pSoilState, pCS_Weather, net_irrigations,
+                                                  Irrigation_Recommendation,
+                                                  pCS_Fertilization, Today_Crop_N_Demand, 
+                                                  Available_N)
     
     
     #SummaryOutput
@@ -934,5 +1036,6 @@ for crop in range(1,Number_Of_Crops + 1):
     CropOutputs[crop].to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_crop_{crop}_{crop_output_excel_csv}',index=False)
     SoilOutputs[crop].to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_crop_{crop}_{soil_output_excel_csv}',index=False)
     CropSumOutputs[crop].T.reset_index().to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_crop_{crop}_CropSum.csv',index=False,header=True)
+    DailyBudgetOutputs[crop].to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_crop_{crop}_{budget_output_excel_csv}',index=False)
 TotalSimPeriodOutput.T.reset_index().to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_TotalSimPeriodOutput.csv',index=False,header=True)
 FieldManagementsLogsOutput.to_csv(f'{output_path}/FM_{Farm_Name}_FD_{Field_Name}_FieldManagementLogs.csv',index=False)

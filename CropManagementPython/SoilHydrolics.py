@@ -396,8 +396,8 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
 
     #'Find irrigation events
     NID = net_irrigations[DOY]
-
-    if pSoilState.Refill_Today or pSoilState.Auto_Irrigation:
+    
+    if (pSoilState.Refill_Today or pSoilState.Auto_Irrigation) and NID <= 0.0:
        NID = SetAutoIrrigation(DOY, pSoilState.PAW_Trigger, pSoilState.CWSI_Trigger, Number_Of_Layers, 
                                pSoilState.MAD, pSoilState.Max_Allowed_CWSI, pSoilState.Refill_Today, 
                                pSoilState.Soil_Depth_To_Refill, pSoilState, pETState, 
