@@ -369,6 +369,16 @@ def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs,
     
 def WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs, 
                        pCropState, pETState, pSoilState):
+    preday_Cumulative_N_Uptake = 0
+    #handle first day issue
+    if DOY == 1: 
+        if 366 in pCropState.Cumulative_N_Uptake and pCropState.Cumulative_N_Uptake[366] > 1e-12:
+            preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[366]
+        else:
+            preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[365]
+    else:
+        preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[DOY - 1]
+        
     CropOutRow = {
         "DAE": DAE,
         "DOY": DOY,
@@ -389,7 +399,16 @@ def WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs,
         "N Uptake (kg/ha)": pCropState.Cumulative_N_Uptake[DOY] * 10000, #'Convert kg/m2 to kg/ha
         "Crop WSI (0-1)": pETState.Water_Stress_Index[DOY],
         "Crop NSI (0-1)": pCropState.Nitrogen_Stress_Index[DOY],
-        "PAW Depletion (0-1)": pSoilState.PAW_Depletion[DOY]
+        "PAW Depletion Profile (0-1)": pSoilState.PAW_Depletion[DOY],
+        "PAW Depletion Top 50 cm (0-1)": pSoilState.PAW_Depletion_Top50cm[DOY],
+        "PAW Depletion Mid 50 cm (0-1)": pSoilState.PAW_Depletion_Mid50cm[DOY],
+        "PAW Depletion bottom 50 cm (0-1)": pSoilState.PAW_Depletion_Bottom50cm[DOY],
+        "N Mass Top 50 cm (kg/ha)": pSoilState.N_Mass_Top50cm[DOY],
+        "N Mass Mid 50 cm (kg/ha)": pSoilState.N_Mass_Mid50cm[DOY],
+        "N Mass bottom 50 cm (kg/ha)": pSoilState.N_Mass_Bottom50cm[DOY],
+        "N Leaching (kg/ha)":pSoilFlux.N_Leaching[DOY] * 10000, #'Convert kg/m2 to kg/ha 'NEW Mingliang
+        "Soil N Mass down to 150 cm (kg/ha)": pSoilState.N_Mass_Top50cm[DOY] + pSoilState.N_Mass_Mid50cm[DOY] + pSoilState.N_Mass_Bottom50cm[DOY],
+        "N Uptake Rate (kg/ha/day)": (pCropState.Cumulative_N_Uptake[DOY] - preday_Cumulative_N_Uptake) * 10000 #'Convert kg/m2 to kg/ha
     }
     CropOutputs[Crop_Number].loc[len(CropOutputs[Crop_Number])] = CropOutRow
         
@@ -459,7 +478,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_11152024'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_02212025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -605,7 +624,16 @@ CropColums = {
     "N Uptake (kg/ha)": "float64",
     "Crop WSI (0-1)": "float64",
     "Crop NSI (0-1)": "float64",
-    "PAW Depletion (0-1)": "float64"
+    "PAW Depletion Profile (0-1)": "float64",
+    "PAW Depletion Top 50 cm (0-1)": "float64", #'NEW Mingliang
+    "PAW Depletion Mid 50 cm (0-1)": "float64", #'NEW Mingliang
+    "PAW Depletion bottom 50 cm (0-1)": "float64", #'NEW Mingliang
+    "N Mass Top 50 cm (kg/ha)": "float64", #'NEW Mingliang
+    "N Mass Mid 50 cm (kg/ha)": "float64", #'NEW Mingliang
+    "N Mass bottom 50 cm (kg/ha)": "float64", #'NEW Mingliang
+    "N Leaching (kg/ha)": "float64", #'NEW Mingliang
+    "Soil N Mass down to 150 cm (kg/ha)": "float64", #'NEW Mingliang
+    "N Uptake Rate (kg/ha/day)": "float64"
     }
 
 CropOutputs = dict()
@@ -934,28 +962,30 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
     
     #02072025LML estimate the irrigation recommendations 
     Irrigation_Recommendation = 0.0
-    #Always calculate PAW Depletion for that day
-    if Crop_Active and Irrigation_Recommendation_Option != 'PAW Depletion':
-      SetAutoIrrigation(DOY, True, False, Number_Of_Layers, 
-                            0.5, -9999, False, 
-                            -9999, pSoilState, pETState, pSoilModelLayer)
+    #02252025LML always calculate PAW depletion
+    PAW_Depletion_Today,Water_Depth_To_Refill_fc = calc_PAW_depletion(DOY, 
+            Number_Of_Layers, pSoilState, pETState, pSoilModelLayer)
+    #if Crop_Active and Irrigation_Recommendation_Option != 'PAW Depletion':
+    #  SetAutoIrrigation(DOY, True, False, Number_Of_Layers, 
+    #                        0.5, -9999, False, 
+    #                        -9999, pSoilState, pETState, pSoilModelLayer)
     
     if Crop_Active and Irrigation_Recommendation_Option == 'PAW Depletion':
       Irrigation_Recommendation = \
           SetAutoIrrigation(DOY, True, False, Number_Of_Layers, 
                             Irrigation_Recommendation_Parameter, -9999, False, 
-                            -9999, pSoilState, pETState, pSoilModelLayer)
+                            -9999, pSoilState, pETState, pSoilModelLayer, Water_Depth_To_Refill_fc)
     elif Crop_Active and Irrigation_Recommendation_Option == 'CWSI':
       Irrigation_Recommendation = \
           SetAutoIrrigation(DOY, False, True, Number_Of_Layers, 
                             -9999, Irrigation_Recommendation_Parameter, False, 
-                            -9999, pSoilState, pETState, pSoilModelLayer)  
+                            -9999, pSoilState, pETState, pSoilModelLayer, Water_Depth_To_Refill_fc)  
     elif Irrigation_Recommendation_Option == 'Refill':
       Irrigation_Recommendation = \
           SetAutoIrrigation(DOY, False, False, Number_Of_Layers, 
                             -9999, -9999, True, 
                             Irrigation_Recommendation_Parameter, pSoilState, 
-                            pETState, pSoilModelLayer)  
+                            pETState, pSoilModelLayer, Water_Depth_To_Refill_fc)  
           
     net_irrigation_today,fertilizer_today = \
         WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, 
@@ -967,7 +997,8 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
                            AutoIrrigations, 
                            pSoilFlux, 
                            Crop_Active,
-                           pETState)
+                           pETState,
+                           Water_Depth_To_Refill_fc)
     
     #output managements
     if net_irrigation_today >= 1e-12 or fertilizer_today >=1e-12:

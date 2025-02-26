@@ -68,6 +68,12 @@ class SoilState:
     Profile_Ammonium_N_Content = dict() #(366) As Double
     
     PAW_Depletion = dict() #(366)
+    PAW_Depletion_Top50cm = dict() #(366) As Double 'NEW Mingliang
+    PAW_Depletion_Mid50cm = dict() #(366) As Double 'NEW Mingliang
+    PAW_Depletion_Bottom50cm = dict() #(366) As Double 'NEW Mingliang
+    N_Mass_Top50cm = dict() #(366) As Double 'NEW Mingliang
+    N_Mass_Mid50cm = dict() #(366) As Double 'NEW Mingliang
+    N_Mass_Bottom50cm = dict() #(366) As Double 'NEW Mingliang
     
     #N_Leaching = dict() #(365) As Double
     #Deep_Drainage = dict() #(365) As Double
@@ -172,6 +178,13 @@ def InitSoilState(pSoilState):
             pSoilState.Residue_N_Pool[i][j] = 0.
             
         pSoilState.PAW_Depletion[i] = 0.
+        pSoilState.PAW_Depletion_Top50cm[i] = 0. #'NEW Mingliang
+        pSoilState.PAW_Depletion_Mid50cm[i] = 0. #'NEW Mingliang
+        pSoilState.PAW_Depletion_Bottom50cm[i] = 0. #'NEW Mingliang
+        pSoilState.N_Mass_Top50cm[i] = 0. #'NEW Mingliang
+        pSoilState.N_Mass_Mid50cm[i] = 0. #'NEW Mingliang
+        pSoilState.N_Mass_Bottom50cm[i] = 0. #'NEW Mingliang
+        
         pSoilState.Profile_Nitrate_N_Content[i] = 0.
         pSoilState.Profile_Ammonium_N_Content[i] = 0.
         #pSoilState.N_Leaching[i] = 0.
@@ -347,7 +360,7 @@ def EquilibriumConcentration(Chemical_Mass, WC, DZ, BD, K, Q):
 
 def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterNConc, 
                        Prec, Nitrate_N_Fertilization, Ammonium_N_Fertilization, Nitrate_Fraction, 
-                       AutoIrrigations, pSoilFlux, CropActive, pETState):
+                       AutoIrrigations, pSoilFlux, CropActive, pETState, Water_Depth_To_Refill_fc):
     #'This subroutine only transport nitrate N. Ammonium N only moves down the soil when transformed to nitrate
     Chem_Mass = dict()
     WC = dict()
@@ -401,7 +414,7 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
        NID = SetAutoIrrigation(DOY, pSoilState.PAW_Trigger, pSoilState.CWSI_Trigger, Number_Of_Layers, 
                                pSoilState.MAD, pSoilState.Max_Allowed_CWSI, pSoilState.Refill_Today, 
                                pSoilState.Soil_Depth_To_Refill, pSoilState, pETState, 
-                               pSoilModelLayer)
+                               pSoilModelLayer,Water_Depth_To_Refill_fc)
        net_irrigations[DOY] = NID
        if pSoilState.Refill_Today: 
            pSoilState.Refill_Today = False
@@ -516,6 +529,25 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
     pSoilFlux.Simulation_Total_N_Leaching += Chemical_Leaching * 10000 #'Convert kg/m2 to kg/ha
     pSoilFlux.Simulation_Total_Irrigation += NID
     pSoilFlux.Simulation_Total_Fertilization += Nitrate_N_Fertilization + Ammonium_N_Fertilization
+    
+    
+    #'Begin NEW Mingliang
+    #'Calculate daily N mass output for top, mid, and bottom layers. Also N mass leaching.
+    Top50cm_N_Mass = 0
+    Mid50cm_N_Mass = 0
+    Bottom50cm_N_Mass = 0
+    for Layer in range(1, Number_Of_Layers + 1):
+        if Layer >= 1 and Layer <= 5:
+            Top50cm_N_Mass += pSoilState.Nitrate_N_Content[DOY][Layer] + pSoilState.Ammonium_N_Content[DOY][Layer]
+        elif Layer >= 6 and Layer <= 10:
+            Mid50cm_N_Mass += pSoilState.Nitrate_N_Content[DOY][Layer] + pSoilState.Ammonium_N_Content[DOY][Layer]
+        elif Layer >= 11 and Layer <= 15:
+            Bottom50cm_N_Mass += pSoilState.Nitrate_N_Content[DOY][Layer] + pSoilState.Ammonium_N_Content[DOY][Layer]
+
+    pSoilState.N_Mass_Top50cm[DOY] = Top50cm_N_Mass * 10000 #'convert kg/m2 to kg/ha
+    pSoilState.N_Mass_Mid50cm[DOY] = Mid50cm_N_Mass * 10000 #'convert kg/m2 to kg/ha
+    pSoilState.N_Mass_Bottom50cm[DOY] = Bottom50cm_N_Mass * 10000 #'convert kg/m2 to kg/ha
+    #'END NEW Mingliang
     
     return NID,(Nitrate_N_Fertilization + Ammonium_N_Fertilization)
 

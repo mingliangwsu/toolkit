@@ -160,84 +160,6 @@ def WaterAvailabilityFactor(PAW_Where_N_Upake_Rate_Decreases):
     #'The constants for water_availability_coef were derived from a fitted power trend.
     return 5.259 * pow(PAW_Where_N_Upake_Rate_Decreases, -1.0246)
 
-def NitrogenUptake_OBSOLETE(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoilModelLayer, pSoilState):
-    Potential_N_Uptake = dict()
-    Root_Fraction = dict()
-    Soil_N_Mass = dict()
-    Soil_NO3_Mass = dict()
-    Soil_NH4_Mass = dict()
-    Nitrate_Mass_Fraction = dict()
-    Ammonium_Mass_Fraction = dict()
-    Layer_N_Uptake = dict()
-    
-    Crop_N = pCropState.Crop_N_Mass[DOY]
-    Maximum_Daily_N_Uptake = pCropParameter.Potential_N_Uptake / 10000  # 'Convert kg/ha/day to kg/m2/day
-    Cumulative_Top_Biomass = pCropState.Cumulative_Crop_Biomass[DOY] * 10  #'Convert kg/m2 to Mg/ha
-    #'Calculate daily crop N uptake
-    Number_Of_Layers = pSoilModelLayer.Number_Model_Layers
-    Today_Potential_N_Uptake = 0.0
-    for layer in range(1, Number_Of_Layers + 1):
-        Root_Fraction[layer] = pETState.Root_Fraction[layer]
-        Soil_NO3_Mass[layer] = pSoilState.Nitrate_N_Content[DOY][layer]
-        Soil_NH4_Mass[layer] = pSoilState.Ammonium_N_Content[DOY][layer]
-        if Soil_NO3_Mass[layer] <= 1e-12 and Soil_NH4_Mass[layer] <= 1e-12:
-            Nitrate_Mass_Fraction[layer] = 0
-            Ammonium_Mass_Fraction[layer] = 0
-        else:
-            Nitrate_Mass_Fraction[layer] = Soil_NO3_Mass[layer] / (Soil_NO3_Mass[layer] + Soil_NH4_Mass[layer])
-            Ammonium_Mass_Fraction[layer] = 1 - Nitrate_Mass_Fraction[layer]
-        
-        Soil_N_Mass[layer] = Soil_NO3_Mass[layer] + Soil_NH4_Mass[layer] #'Implement priority for ammonium uptake
-        Bulk_Density = pSoilModelLayer.Bulk_Density[layer]  #'kg/m3 CAREFUL: This must be implemented elsewhere for each soil layer and hookep up to soil hydraulic properties
-        Layer_Thickness = pSoilModelLayer.Layer_Thickness[layer]
-        N_Conc_ppm = (Soil_N_Mass[layer] * 1000000.0) / (Layer_Thickness * Bulk_Density) #'Convert kgN/m2 to mgN/kgSoil
-        #'With better information, unlikely, these two could become crop parameters
-        Soil_N_Conc_ppm_Where_N_Uptake_Decreases = 4 #'ppm
-        Residual_N_Conc_ppm = 2 #'ppm
-        #'Calculate N and water dajustments to N uptake
-        N_Availability_Coefficient = NAvailabilityFactor(Soil_N_Conc_ppm_Where_N_Uptake_Decreases, Residual_N_Conc_ppm)
-        if N_Conc_ppm > Residual_N_Conc_ppm:
-            N_Availability_Adjustment = (1.0 - math.exp(-(N_Conc_ppm - Residual_N_Conc_ppm) * N_Availability_Coefficient))
-        else:
-            N_Availability_Adjustment = 0
-        
-        Plant_Available_Water = pSoilModelLayer.Plant_Available_Water_Content[layer]
-        PAW_Where_N_Uptake_Rate_Decreases = 0.5
-        Water_Availability_Coefficient = WaterAvailabilityFactor(PAW_Where_N_Uptake_Rate_Decreases)
-        Water_Availability_Adjustment = 1 - math.exp(-Water_Availability_Coefficient * Plant_Available_Water)
-        Potential_N_Uptake[layer] = Maximum_Daily_N_Uptake * Root_Fraction[layer] * Water_Availability_Adjustment * N_Availability_Adjustment  #'kg/m2
-        if Potential_N_Uptake[layer] > Soil_N_Mass[layer]: Potential_N_Uptake[layer] = Soil_N_Mass[layer]
-        Today_Potential_N_Uptake += Potential_N_Uptake[layer]
-
-    Surplus = max(0, pCropState.Crop_N_Mass[DOY - 1] - pCropState.Maximum_N_Concentration[DOY] * (Cumulative_Top_Biomass / 10)) #'Convert biomass from Mg/ha to kg/m2
-    Today_Crop_N_Demand = max(0, (Cumulative_Top_Biomass / 10) * pCropState.Maximum_N_Concentration[DOY] - pCropState.Crop_N_Mass[DOY - 1] - Surplus)  #'Convert biomass from Mg/ha to kg/m2
-    Today_Expected_N_Uptake = min(Today_Crop_N_Demand, Today_Potential_N_Uptake)
-    #'Calculate actual N uptake and update soil layer N mass
-    Today_N_Uptake = 0
-    for layer in range(1, Number_Of_Layers + 1):
-        Layer_N_Uptake[layer] = min(Potential_N_Uptake[layer], Today_Expected_N_Uptake * Root_Fraction[layer])
-        Today_N_Uptake += Layer_N_Uptake[layer]
-        Soil_NO3_Mass[layer] -= Layer_N_Uptake[layer] * Nitrate_Mass_Fraction[layer]
-        Soil_NH4_Mass[layer] -= Layer_N_Uptake[layer] * Ammonium_Mass_Fraction[layer]
-        #'Update N mass
-        pSoilState.Nitrate_N_Content[DOY][layer] = Soil_NO3_Mass[layer]
-        pSoilState.Ammonium_N_Content[DOY][layer] = Soil_NH4_Mass[layer]
-
-    Cum_N_Upt = pCropState.Cumulative_N_Uptake[DOY - 1] + Today_N_Uptake
-    Crop_N = pCropState.Crop_N_Mass[DOY - 1] + Today_N_Uptake #'Crop N mass different to cumulative N uptake only if Crop N mass set at emergence or foliar applications considered
-    if Cumulative_Top_Biomass > 0:
-        Crop_N_Conc = Crop_N / (Cumulative_Top_Biomass / 10)  #'kgN/kgBiomass, but convert biomass from Mg/ha to kg/m2
-    else:
-        Crop_N_Conc = 0
-    #'Update variables
-    pCropState.Crop_N_Mass[DOY] = Crop_N
-    pCropState.N_Uptake[DOY] = Today_N_Uptake
-    pCropState.Cumulative_N_Uptake[DOY] = Cum_N_Upt
-    pCropState.Crop_N_Concentration[DOY] = Crop_N_Conc
-    if pCropState.Crop_N_Concentration[DOY] >= pCropState.Critical_N_Concentration[DOY]: 
-        pCropState.Nitrogen_Stress_Index[DOY] = 0
-    else:
-        pCropState.Nitrogen_Stress_Index[DOY] = min(1, 1 - (pCropState.Crop_N_Concentration[DOY] - pCropState.Minimum_N_Concentration[DOY]) / (pCropState.Critical_N_Concentration[DOY] - pCropState.Minimum_N_Concentration[DOY]))
 
 def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoilModelLayer, pSoilState):
     Soil_N_Mass = dict() #(20) As Double
@@ -264,8 +186,10 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
     #'Maximum_Daily_N_Uptake = ReadInputs.PotentialNUptake(Crop_Number) / 10000# 'Convert kg/ha/day to kg/m2/day
     Cumulative_Top_Biomass = pCropState.Cumulative_Crop_Biomass[DOY] #'kg/m2
     Today_Plant_N_Max = pCropState.Maximum_N_Concentration[DOY]
-    Surplus = max(0, Crop_N - Today_Plant_N_Max * Cumulative_Top_Biomass)
-    Today_Crop_N_Demand = max(0, Cumulative_Top_Biomass * Today_Plant_N_Max - Crop_N - Surplus) #'Convert biomass from Mg/ha to kg/m2
+    #COS LML 02252025 Surplus = max(0, Crop_N - Today_Plant_N_Max * Cumulative_Top_Biomass)
+    #COS LML 02252025 Today_Crop_N_Demand = max(0, Cumulative_Top_Biomass * Today_Plant_N_Max - Crop_N - Surplus) #'Convert biomass from Mg/ha to kg/m2
+    Today_Crop_N_Demand = max(0, Cumulative_Top_Biomass * Today_Plant_N_Max - Crop_N) #'Convert biomass from Mg/ha to kg/m2
+    
     #'Calculate daily potential PASSIVE crop N uptake
     Total_Potential_Passive_N_Uptake = 0.
     Total_Water_Uptake = 0.
