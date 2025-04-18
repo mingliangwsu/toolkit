@@ -18,8 +18,8 @@ import math
 #outpatch_vegid_file = outpath + "/patch_vegID2.txt"
 #outpatch_vegid_file = outpath + "/patch_vegID2_04272022.txt"
 
-state_file_name = "/home/liuming/mnt/hydronas2/Projects/FireEarth/Cedar/cedar_world_final_fire.txt"
-outpath = "/home/liuming/mnt/hydronas2/Projects/FireEarth/Cedar"
+state_file_name = "/home/liuming/mnt/hydronas3/Projects/WWS_Oregon/GateCreek_Ankit/Gatecreek_postfire/Gate_creek_postfire.world.Y2023M12D30H24.state"
+outpath = "/home/liuming/mnt/hydronas3/Projects/WWS_Oregon/GateCreek_Ankit/Gatecreek_postfire"
 outpatch_vegid_file = outpath + "/patch_xyz_vegid.txt"
 
 

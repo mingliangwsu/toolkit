@@ -12,10 +12,10 @@ import sys
 import os
 import math
 
-datadir_root = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/scenarios/historical/gridmet/1979"
+datadir_root = "/home/liuming/mnt/hydronas3/Projects/WWS_Oregon/GateCreek_Ankit/Gatecreek_postfire"
 #output_dir_name = "liudebug_init"
-state_file_name = "br_veg_spun_and_stable.state.Y2015M1D1H1.state.Y2015M1D1H1.state"
-outpath = "/home/liuming/mnt/hydronas3/Projects/FireEarth/for_min/process_data"
+state_file_name = "Gate_creek_postfire.world.Y2023M12D30H24.state"
+outpath = datadir_root
 outpatch_vegid_file = outpath + "/patch_xyz_zone_hillslope_stemc_init.txt"
 fullpath_state_file_name = datadir_root + "/" + state_file_name
 
