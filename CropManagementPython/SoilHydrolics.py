@@ -68,9 +68,12 @@ class SoilState:
     Profile_Ammonium_N_Content = dict() #(366) As Double
     
     PAW_Depletion = dict() #(366)
-    PAW_Depletion_Top50cm = dict() #(366) As Double 'NEW Mingliang
-    PAW_Depletion_Mid50cm = dict() #(366) As Double 'NEW Mingliang
-    PAW_Depletion_Bottom50cm = dict() #(366) As Double 'NEW Mingliang
+    #PAW_Depletion_Top50cm = dict() #(366) As Double 'NEW Mingliang
+    #PAW_Depletion_Mid50cm = dict() #(366) As Double 'NEW Mingliang
+    #PAW_Depletion_Bottom50cm = dict() #(366) As Double 'NEW Mingliang
+    Water_Content_Top50cm = dict() #(366) As Double 'Mingliang 4/17/2025
+    Water_Content_Mid50cm = dict() #(366) As Double 'Mingliang 4/17/2025
+    Water_Content_Bottom50cm = dict() #(366) As Double 'Mingliang 4/17/2025
     N_Mass_Top50cm = dict() #(366) As Double 'NEW Mingliang
     N_Mass_Mid50cm = dict() #(366) As Double 'NEW Mingliang
     N_Mass_Bottom50cm = dict() #(366) As Double 'NEW Mingliang
@@ -80,7 +83,7 @@ class SoilState:
     #Chemical_Balance = dict() #(365) As Double
     #Water_Balance = dict() #(365) As Double
     
-    Soil_Water_Potential = dict() # = dict()
+    Soil_Water_Potential = dict() # = dict() (366,20)
     Layer_Daily_Soil_Temperature = dict()
     Layer_Hourly_Soil_Temperature = dict() #(20,24)?  (Layer, Hour)
     
@@ -152,6 +155,8 @@ class ETState:
     Adjusted_Root_Fraction = dict() #(20) As Double
     Soil_Water_Uptake = dict() #(366,20)
     Total_Transpiration = 0.
+    Cumulative_Soil_Water_Evaporation = 0 #'Mingliang 4/17/2025
+
 
 def InitSoilState(pSoilState):
     for i in range(1,367):
@@ -165,6 +170,8 @@ def InitSoilState(pSoilState):
         pSoilState.SOM_N_Pool[i] = dict()
         pSoilState.Residue_C_Pool[i] = dict()
         pSoilState.Residue_N_Pool[i] = dict()
+        pSoilState.Soil_Water_Potential[i] = dict()
+
         for j in range(1,21):
             pSoilState.Water_Content[i][j] = 0.
             pSoilState.Water_Filled_Porosity[i][j] = 0.
@@ -176,11 +183,15 @@ def InitSoilState(pSoilState):
             pSoilState.SOM_N_Pool[i][j] = 0.
             pSoilState.Residue_C_Pool[i][j] = 0.
             pSoilState.Residue_N_Pool[i][j] = 0.
+            pSoilState.Soil_Water_Potential[i][j] = 0.
             
         pSoilState.PAW_Depletion[i] = 0.
-        pSoilState.PAW_Depletion_Top50cm[i] = 0. #'NEW Mingliang
-        pSoilState.PAW_Depletion_Mid50cm[i] = 0. #'NEW Mingliang
-        pSoilState.PAW_Depletion_Bottom50cm[i] = 0. #'NEW Mingliang
+        #pSoilState.PAW_Depletion_Top50cm[i] = 0. #'NEW Mingliang
+        #pSoilState.PAW_Depletion_Mid50cm[i] = 0. #'NEW Mingliang
+        #pSoilState.PAW_Depletion_Bottom50cm[i] = 0. #'NEW Mingliang
+        pSoilState.Water_Content_Top50cm[i] = 0. #' 'Mingliang 4/17/2025
+        pSoilState.Water_Content_Mid50cm[i] = 0. #' 'Mingliang 4/17/2025
+        pSoilState.Water_Content_Bottom50cm[i] = 0. # 'Mingliang 4/17/2025
         pSoilState.N_Mass_Top50cm[i] = 0. #'NEW Mingliang
         pSoilState.N_Mass_Mid50cm[i] = 0. #'NEW Mingliang
         pSoilState.N_Mass_Bottom50cm[i] = 0. #'NEW Mingliang
@@ -193,8 +204,8 @@ def InitSoilState(pSoilState):
         #pSoilState.Water_Balance[i] = 0.
         #pSoilState.Fertilization_Rate[i] = 0.
         pSoilState.Layer_Daily_Soil_Temperature[i] = 0.
-    for j in range(1,21):
-        pSoilState.Soil_Water_Potential[j] = 0.
+    #for j in range(1,21):
+    #    pSoilState.Soil_Water_Potential[j] = 0.
     for i in range(1, 21):
         pSoilState.Layer_Hourly_Soil_Temperature[i] = dict()
         for j in range(1,25):
@@ -515,6 +526,7 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
     #'Update water and nitrogen content after transport
     for Layer in range(1, Number_Of_Layers + 1):
          pSoilState.Water_Content[DOY][Layer] = WC[Layer]
+         pSoilState.Soil_Water_Potential[DOY][Layer] = WP(pSoilModelLayer.Saturation_Water_Content[Layer], pSoilState.Water_Content[DOY][Layer], pSoilModelLayer.Air_Entry_Potential[Layer], pSoilModelLayer.B_value[Layer]) #'Mingliang 4/16/2025
          pSoilState.Nitrate_N_Content[DOY][Layer] = Chem_Mass[Layer]
          pSoilFlux.N_Leaching[DOY] = Chemical_Leaching #'kg/m2
          pSoilFlux.Deep_Drainage[DOY] = Drainage  #'mm
@@ -631,7 +643,9 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
     Layer_Plant_Hydraulic_Conductance = dict()
     Layer_Root_Fraction_Adjustment = dict()
     #Adjusted_Root_Fraction = dict()
-    Soil_WP = dict()
+    Soil_WP = dict() #(366,20)
+    for i in range(1,367):
+        Soil_WP[i] = dict()
     WP_At_FC = dict()
     WP_At_PWP = dict()
     Air_Entry_Potential = dict()
@@ -691,6 +705,9 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
     
     #'Adjust root fraction based on soil dryness or soil near saturation
     Sum_Root_Fraction_Adjustment = 0
+    
+    SWP = dict() #(20) As Double 'OJO
+    
     for i in range(2, Number_Of_Soil_Layers + 1):
         
         #in some cases Soil_Water_Potential not being updated
@@ -699,13 +716,17 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
         #AEP = pSoilModelLayer.Air_Entry_Potential[i]
         #B_Val = pSoilModelLayer.B_value[i]
         #pSoilState.Soil_Water_Potential[i] = WP(Sat_WC, WC, AEP, B_Val)
-        
-        
-        Soil_WP[i] = pSoilState.Soil_Water_Potential[i]
-        if Soil_WP[i] <= WP_At_FC[i]:
-            Root_Activity_Factor[i] = 1 - math.pow(((Soil_WP[i] - WP_At_FC[i]) / (WP_At_PWP[i] - WP_At_FC[i])), 8) #'Calculate dry end of root activity
+        if DOY == 1:
+            pre_DOY = 365
         else:
-            Root_Activity_Factor[i] = 1 - math.pow(((Soil_WP[i] - WP_At_FC[i]) / (Air_Entry_Potential[i] - WP_At_FC[i])), 20) #'Calculate wet end of root activity
+            pre_DOY = DOY - 1
+        SWP[i] = pSoilState.Soil_Water_Potential[pre_DOY][i]
+        
+        Soil_WP[DOY][i] = SWP[i]
+        if Soil_WP[DOY][i] <= WP_At_FC[i]:
+            Root_Activity_Factor[i] = 1 - math.pow(((SWP[i] - WP_At_FC[i]) / (WP_At_PWP[i] - WP_At_FC[i])), 8) #'Calculate dry end of root activity
+        else:
+            Root_Activity_Factor[i] = 1 - math.pow(((SWP[i] - WP_At_FC[i]) / (Air_Entry_Potential[i] - WP_At_FC[i])), 20) #'Calculate wet end of root activity
         
         if Root_Activity_Factor[i] > 1: Root_Activity_Factor[i] = 1
         if Root_Activity_Factor[i] < 0: Root_Activity_Factor[i] = 0
@@ -723,7 +744,7 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
     #'Calculate average soil water potential (J/kg)
     Average_Soil_WP = 0
     for i in range(2, Number_Of_Soil_Layers + 1):
-        Average_Soil_WP += Soil_WP[i] * pETState.Adjusted_Root_Fraction[i]
+        Average_Soil_WP += Soil_WP[DOY][i] * pETState.Adjusted_Root_Fraction[i]
     
     #'Calculate leaf water potential
     if Plant_Hydraulic_Conductance <= 1e-12: 
@@ -740,7 +761,7 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
     #'Calculate crop water uptake (kg/m2/d = mm/d)
     Crop_Water_Uptake = 0
     for i in range(2, Number_Of_Soil_Layers + 1):
-        pETState.Soil_Water_Uptake[DOY][i] = Layer_Plant_Hydraulic_Conductance[i] * (Soil_WP[i] - Leaf_Water_Pot)
+        pETState.Soil_Water_Uptake[DOY][i] = Layer_Plant_Hydraulic_Conductance[i] * (Soil_WP[DOY][i] - Leaf_Water_Pot)
         Crop_Water_Uptake = Crop_Water_Uptake + pETState.Soil_Water_Uptake[DOY][i]
         #'Update water content and potential
         pSoilState.Water_Content[DOY][i] -= pETState.Soil_Water_Uptake[DOY][i] / (pSoilModelLayer.Layer_Thickness[i] * WD)
@@ -748,7 +769,7 @@ def ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETSta
         Sat_WC = pSoilModelLayer.Saturation_Water_Content[i]
         AEP = pSoilModelLayer.Air_Entry_Potential[i]
         B_Val = pSoilModelLayer.B_value[i]
-        pSoilState.Soil_Water_Potential[i] = WP(Sat_WC, WC, AEP, B_Val)
+        pSoilState.Soil_Water_Potential[DOY][i] = WP(Sat_WC, WC, AEP, B_Val)
         pSoilState.Water_Filled_Porosity[DOY][i] = WC / Sat_WC
 
     Act_Transp = Crop_Water_Uptake
@@ -794,13 +815,14 @@ def ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState):
 
     #'Update water content and potential of top layer
     pSoilState.Water_Content[DOY][1] -= pETState.Actual_Soil_Water_Evaporation[DOY] / (pSoilModelLayer.Layer_Thickness[1] * WD)
+    pETState.Cumulative_Soil_Water_Evaporation += pETState.Actual_Soil_Water_Evaporation[DOY]   #'Mingliang 4/17/2025
     
     #Testing?
     WC = pSoilState.Water_Content[DOY][1]
     Sat_WC = pSoilModelLayer.Saturation_Water_Content[1]
     AEP = pSoilModelLayer.Air_Entry_Potential[1]
     B_Val = pSoilModelLayer.B_value[1]
-    pSoilState.Soil_Water_Potential[1] = WP(Sat_WC, WC, AEP, B_Val)
+    pSoilState.Soil_Water_Potential[DOY][1] = WP(Sat_WC, WC, AEP, B_Val)
     pSoilState.Water_Filled_Porosity[DOY][1] = WC / Sat_WC
     
 def InitETState(pETState):
@@ -819,6 +841,7 @@ def InitETState(pETState):
         pETState.Root_Fraction[i] = 0.0
         pETState.Adjusted_Root_Fraction[i] = 0.
     pETState.Total_Transpiration = 0.
+    pETState.Cumulative_Soil_Water_Evaporation = 0.0
 
 def ClearETState(pETState):
     for i in range(1,367):

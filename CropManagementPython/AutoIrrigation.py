@@ -61,12 +61,16 @@ def ReadAutoIrrigation(Cells,AutoIrrigation,DOY_Last_Scheduled_Irrigation,
 
 def calc_PAW_depletion(DOY, NL, pSoilState, pETState, pSoilModelLayer):
     PAW_Depletion_Today = 0.
-    Top50cm_PAW_Depletion = 0.
-    Mid50cm_PAW_Depletion = 0.
-    Bottom50cm_PAW_Depletion = 0.
+    #Top50cm_PAW_Depletion = 0.
+    #Mid50cm_PAW_Depletion = 0.
+    #Bottom50cm_PAW_Depletion = 0.
 
     Water_Density = 1000 #'kg/m3
     Water_Depth_To_Refill_fc = 0.
+    
+    Top50cm_WC = 0
+    Mid50cm_WC = 0
+    Bottom50cm_WC = 0
     #Always calculate PAW depletion
     #PAW_Depletion_Today = 0.
     for Layer in range(1, NL + 1):
@@ -80,18 +84,30 @@ def calc_PAW_depletion(DOY, NL, pSoilState, pETState, pSoilModelLayer):
         PAW_Depletion_Today += lyr_depletion * Layer_Root_Fraction
         Water_Depth_To_Refill_fc += (FC - WC) * Water_Density * pSoilModelLayer.Layer_Thickness[Layer]
         
-        if Layer >= 2 and Layer <= 6:
-            Top50cm_PAW_Depletion += lyr_depletion
-        elif Layer >= 7 and Layer <= 11:
-            Mid50cm_PAW_Depletion += lyr_depletion
-        elif Layer >= 12 and Layer <= 16:
-            Bottom50cm_PAW_Depletion += lyr_depletion
-
+        #if Layer >= 2 and Layer <= 6:
+        #    Top50cm_PAW_Depletion += lyr_depletion
+        #elif Layer >= 7 and Layer <= 11:
+        #    Mid50cm_PAW_Depletion += lyr_depletion
+        #elif Layer >= 12 and Layer <= 16:
+        #    Bottom50cm_PAW_Depletion += lyr_depletion
         if Layer > 1 and Layer_Root_Fraction <= 1e-12: break #'All layers with roots plus one extra layers are refilled. Leave the loop
+        
+    for Layer in range(1, NL + 1):
+        if Layer >= 2 and Layer <= 6:
+            Top50cm_WC += pSoilState.Water_Content[DOY][Layer]
+        elif Layer >= 7 and Layer <= 11:
+            Mid50cm_WC += pSoilState.Water_Content[DOY][Layer]
+        elif Layer >= 12 and Layer <= 16:
+            Bottom50cm_WC += pSoilState.Water_Content[DOY][Layer]
+
+    
     pSoilState.PAW_Depletion[DOY] = PAW_Depletion_Today
-    pSoilState.PAW_Depletion_Top50cm[DOY] = Top50cm_PAW_Depletion / 5. #'Average of five soil layers
-    pSoilState.PAW_Depletion_Mid50cm[DOY] = Mid50cm_PAW_Depletion / 5. #'Average of five soil layers
-    pSoilState.PAW_Depletion_Bottom50cm[DOY] = Bottom50cm_PAW_Depletion / 5. #'Average of five soil layers
+    #pSoilState.PAW_Depletion_Top50cm[DOY] = Top50cm_PAW_Depletion / 5. #'Average of five soil layers
+    #pSoilState.PAW_Depletion_Mid50cm[DOY] = Mid50cm_PAW_Depletion / 5. #'Average of five soil layers
+    #pSoilState.PAW_Depletion_Bottom50cm[DOY] = Bottom50cm_PAW_Depletion / 5. #'Average of five soil layers
+    pSoilState.Water_Content_Top50cm[DOY] = Top50cm_WC / 5. #'Average of five soil layers
+    pSoilState.Water_Content_Mid50cm[DOY] = Mid50cm_WC / 5. #'Average of five soil layers
+    pSoilState.Water_Content_Bottom50cm[DOY] = Bottom50cm_WC / 5. #'Average of five soil layers
     
     return PAW_Depletion_Today,Water_Depth_To_Refill_fc
         

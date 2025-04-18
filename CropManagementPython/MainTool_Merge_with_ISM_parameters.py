@@ -312,7 +312,8 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
             if j <= pSoilModelLayer.Number_Model_Layers:
                 pSoilState.Water_Content[DOY][j] = Water[i]
                 pSoilState.Water_Filled_Porosity[DOY][j] = Water[i] / pSoilModelLayer.Saturation_Water_Content[i]
-                pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
+                #pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
+                pSoilState.Soil_Water_Potential[DOY][j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
                 pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / Number_Of_Sublayers[i]
                 pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] / Number_Of_Sublayers[i]
                 pSoilModelLayer.Soil_Mass[j] = pSoilModelLayer.Bulk_Density[j] * 1000 * pSoilModelLayer.Layer_Thickness[j] #'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
@@ -320,12 +321,34 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
                 pSoilState.Soil_Organic_Carbon[DOY][j] = SOC
                 pSoilState.Soil_Organic_Nitrogen[DOY][j] = SOC / SOC_C_N_Ratio
         Cum_J = L + 1
-    Number_Model_Layers = Cum_J - 1
+    #Number_Model_Layers = Cum_J - 1
     #'Determine the thickness of the soil water evaporation layer
     #Percent_Sand = ReadInputs.PercentSand(1)
     #Thickness_Evaporative_Layer = Round(-0.001 * Percent_Sand + 0.169, 2)
     #Layer_Thickness(1) = Thickness_Evaporative_Layer
     #'Set accumulators to zero
+    
+    #'Mingliang: Begin of new section added
+    Number_Initialization_Layers = Cum_J - 1 #'Mingliang 4/15/2025
+    NML = pSoilModelLayer.Number_Model_Layers #'Mingliang 4/15/2025 'This is the total number of simulation model layers 'Mingliang 4/15/2025
+    for i in range(Number_Initialization_Layers + 1, NML + 1):
+            pSoilModelLayer.Layer_Thickness[i] = pSoilModelLayer.Layer_Thickness[Number_Initialization_Layers]
+            pSoilState.Water_Content[DOY][i] =pSoilState.Water_Content[DOY][Number_Initialization_Layers]
+            pSoilState.Water_Filled_Porosity[DOY][i] = pSoilState.Water_Content[DOY][i] / pSoilModelLayer.Saturation_Water_Content[i]
+            #'Mingliang Soil water potential was changed to a two-dimensional array
+            #'        Soil_Water_Potential(i) = WP(Saturation_Water_Content(i), Water_Content(DOY, i), Air_Entry_Potential(i), B_value(i))
+            pSoilState.Soil_Water_Potential[DOY][i] = WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
+            pSoilState.Nitrate_N_Content[DOY][i] = pSoilState.Nitrate_N_Content[DOY][Number_Initialization_Layers]
+            pSoilState.Ammonium_N_Content[DOY][i] = pSoilState.Ammonium_N_Content[DOY][Number_Initialization_Layers]
+            #'        Initialize soil organi carbon and nitrogen
+            #'        Convert percent organic matter to soil organic carbon in kg C/m2 soil
+            pSoilModelLayer.Soil_Mass[i] = pSoilModelLayer.Bulk_Density[i] * 1000. # * Layer_Thickness(i) 'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
+            SOC = pSoilModelLayer.Soil_Mass[i] * (pSoilModelLayer.Percent_Soil_Organic_Matter[i] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
+            pSoilState.Soil_Organic_Carbon[DOY][i] = SOC
+            pSoilState.Soil_Organic_Nitrogen[DOY][i] = SOC / SOC_C_N_Ratio
+    #'Mingliang: End of new section added
+    
+    
     Cumulative_Deep_Drainage = 0
     Cumulative_N_Leaching = 0
     
@@ -361,6 +384,7 @@ def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs,
         "Cumulative irrigation (mm)": pSoilFlux.Cumulative_Irrigation,
         "Cumulative N fertilization (kg/ha)": pSoilFlux.Cumulative_Fertilization * 10000, #'Convert kg/m2 to kg/ha,
         "Seasonal Transpiration (mm)": pETState.Total_Transpiration,
+        "Seasonal Soil Water Evaporation (mm)": pETState.Cumulative_Soil_Water_Evaporation,
         "Seasonal N Uptake (kg/ha)": pCropState.Seasonal_N_Uptake * 10000, # 'Convert kg/m2 to kg/ha ,
         "Seasonal Potential Biomass (kg/ha)": pCropState.Cumulative_Potential_Crop_Biomass[DOY - 1] * 10000, # 'Convert kg/m2 to kg/ha,
         "Seasonal Actual Biomass (kg/ha)": pCropState.Seasonal_Biomass * 10000 # 'Convert kg/m2 to kg/ha
@@ -400,9 +424,12 @@ def WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs,
         "Crop WSI (0-1)": pETState.Water_Stress_Index[DOY],
         "Crop NSI (0-1)": pCropState.Nitrogen_Stress_Index[DOY],
         "PAW Depletion Profile (0-1)": pSoilState.PAW_Depletion[DOY],
-        "PAW Depletion Top 50 cm (0-1)": pSoilState.PAW_Depletion_Top50cm[DOY],
-        "PAW Depletion Mid 50 cm (0-1)": pSoilState.PAW_Depletion_Mid50cm[DOY],
-        "PAW Depletion bottom 50 cm (0-1)": pSoilState.PAW_Depletion_Bottom50cm[DOY],
+        #"PAW Depletion Top 50 cm (0-1)": pSoilState.PAW_Depletion_Top50cm[DOY],
+        #"PAW Depletion Mid 50 cm (0-1)": pSoilState.PAW_Depletion_Mid50cm[DOY],
+        #"PAW Depletion bottom 50 cm (0-1)": pSoilState.PAW_Depletion_Bottom50cm[DOY],
+        "Water Top 50 cm (m/m)": pSoilState.Water_Content_Top50cm[DOY],
+        "Water Mid 50 cm (m/m)": pSoilState.Water_Content_Mid50cm[DOY],
+        "Water bottom 50 cm (m/m)": pSoilState.Water_Content_Bottom50cm[DOY],
         "N Mass Top 50 cm (kg/ha)": pSoilState.N_Mass_Top50cm[DOY],
         "N Mass Mid 50 cm (kg/ha)": pSoilState.N_Mass_Mid50cm[DOY],
         "N Mass bottom 50 cm (kg/ha)": pSoilState.N_Mass_Bottom50cm[DOY],
@@ -478,7 +505,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_02212025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_04172025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -625,9 +652,12 @@ CropColums = {
     "Crop WSI (0-1)": "float64",
     "Crop NSI (0-1)": "float64",
     "PAW Depletion Profile (0-1)": "float64",
-    "PAW Depletion Top 50 cm (0-1)": "float64", #'NEW Mingliang
-    "PAW Depletion Mid 50 cm (0-1)": "float64", #'NEW Mingliang
-    "PAW Depletion bottom 50 cm (0-1)": "float64", #'NEW Mingliang
+    #"PAW Depletion Top 50 cm (0-1)": "float64", #'NEW Mingliang
+    #"PAW Depletion Mid 50 cm (0-1)": "float64", #'NEW Mingliang
+    #"PAW Depletion bottom 50 cm (0-1)": "float64", #'NEW Mingliang
+    "Water Top 50 cm (m/m)": "float64", #'NEW Mingliang
+    "Water Mid 50 cm (m/m)": "float64", #'NEW Mingliang
+    "Water bottom 50 cm (m/m)": "float64", #'NEW Mingliang
     "N Mass Top 50 cm (kg/ha)": "float64", #'NEW Mingliang
     "N Mass Mid 50 cm (kg/ha)": "float64", #'NEW Mingliang
     "N Mass bottom 50 cm (kg/ha)": "float64", #'NEW Mingliang
@@ -719,6 +749,7 @@ CropSumColums = {
     "Cumulative irrigation (mm)": "float64",
     "Cumulative N fertilization (kg/ha)": "float64",
     "Seasonal Transpiration (mm)": "float64",
+    "Seasonal Soil Water Evaporation (mm)": "float64", #'Mingliang 4/17/2025
     "Seasonal N Uptake (kg/ha)": "float64",
     "Seasonal Potential Biomass (kg/ha)": "float64",
     "Seasonal Actual Biomass (kg/ha)": "float64"
@@ -854,7 +885,7 @@ DAE = 0
 
 Number_Of_Layers = pSoilModelLayer.Number_Model_Layers
 #'Begin time loop
-while Days_Elapsed < Number_Of_Days_To_Simulate:
+while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
     Today_Crop_N_Demand = 0.0
     Available_N = 0.0
     #Crop_Number = ReadInputs.CropOrder(1)
@@ -884,7 +915,7 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
             Day_Of_The_Year += 1
             if Day_Of_The_Year > 365: Day_Of_The_Year = 1
     #'Set up Crop Number 2
-    if DOY == CropGrowths[2].Emergence_DOY:
+    if 2 in CropGrowths and DOY == CropGrowths[2].Emergence_DOY:
         Crop_Active = True
         Crop_Number = 2
         DAE = 1
@@ -1035,6 +1066,7 @@ while Days_Elapsed < Number_Of_Days_To_Simulate:
     #SummaryOutput
     #if DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY:
     #if Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY: output cumulations before harvest day
+    print(f'DOY:{DOY}')
     if DOY == max(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY):
         WriteCropSummaryOutput(1, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
