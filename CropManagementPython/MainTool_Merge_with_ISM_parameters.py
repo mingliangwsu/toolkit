@@ -521,7 +521,7 @@ cropCells = pd.read_csv(f'{data_path}/{crop_from_excel_csv}',header=None)
 SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
 
 #user option
-soil_propertities_from_SSURGO = False
+soil_propertities_from_SSURGO = True
 crop_growth_parameter_from_ISM = False
 weather_from_AgWeatherNet = False
 
@@ -543,8 +543,15 @@ Water_N_Conc = float(get_excel_value(InputCells,'D12'))
 
 ISM_cropnames = {'Triticale': 'Triticale (for forage)','Silage Corn': 'Corn (silage)'}  #TODO
 
+#user define the field boundary or point
+#test for point
 field_lat = 45.97
 field_lon = -119.26
+wkt_geometry = f'point ({field_lon} {field_lat})'
+
+#test for polygon
+wkt_geometry = 'POLYGON((-119.265 45.972, -119.259 45.972,-119.259 45.968,-119.265 45.969,-119.265 45.972))'
+
 AnemomH = 1.5                                                                  #elevation of anemometer (m)
 
 #'First simulation run day of tghe year
@@ -565,7 +572,11 @@ pSoilModelLayer = SoilModelLayer()
 if soil_propertities_from_SSURGO == False:                                     #User set soil horizental properties
     ReadSoilHorizonParamegters(InputCells,pSoilHorizen)
 else:
-    mukey,muname = get_mukey_muname_from_geocoordinate(field_lon,field_lat)
+    if 'point' in wkt_geometry:
+        point = wkt.loads(wkt_geometry)
+        mukey,muname,percent = get_mukey_muname_from_geocoordinate(point.x,point.y)
+    else:
+        mukey,muname,percent = get_dominant_mukey_muname_from_polygon(wkt_geometry, 10)
     if mukey is not None:
         #print(f'{mukey}:{muname}')
         result = get_all_components_soil_properties(mukey)
@@ -1066,11 +1077,12 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
     #SummaryOutput
     #if DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY:
     #if Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY: output cumulations before harvest day
-    print(f'DOY:{DOY}')
+    #print(f'DOY:{DOY}')
     if DOY == max(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY):
         WriteCropSummaryOutput(1, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
                                pETState)
+        #print(f'WriteCropSummaryOutput:{DOY} Crop_Number:{Crop_Number} Maturity_DOY:{CropGrowths[1].Maturity_DOY} Harvest_DOY:{CropGrowths[1].Harvest_DOY}')
         #Crop_Number = 0
     if Crop_Number == 2 and DOY == CropGrowths[2].Maturity_DOY:
         WriteCropSummaryOutput(2, DOY, CropSumOutputs, 
