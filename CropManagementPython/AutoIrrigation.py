@@ -41,17 +41,17 @@ def ReadAutoIrrigation(Cells,AutoIrrigation,DOY_Last_Scheduled_Irrigation,
             irrigation.Maximum_Allowable_PAW_Depletion = get_cell_float(Cells.iloc[start_row_idx + i, 9 - 1])
             irrigation.Maximum_Allowable_CWSI = get_cell_float(Cells.iloc[start_row_idx + i, 10 - 1])
             irrigation.Refill_Depth = get_cell_float(Cells.iloc[start_row_idx + i, 11 - 1])
-            irrigation.Irrigated_Crop_Number = get_cell_int(Cells.iloc[start_row_idx + i, 12 - 1])
+            #04252025COS-LML irrigation.Irrigated_Crop_Number = get_cell_int(Cells.iloc[start_row_idx + i, 12 - 1])
                 
                 
             if irrigation.Event_Type == "START":
                 irrigation.DOY_To_Start_Auto_Irrigation = irrigation.DOY_Event
-                if irrigation.Irrigated_Crop_Number == 1:
-                    if (DOY_Last_Scheduled_Irrigation > Emergence_DOY_1 or DOY_Last_Scheduled_Irrigation > 1) and (DOY_Last_Scheduled_Irrigation <= Maturity_DOY_1):
-                        irrigation.DOY_To_Start_Auto_Irrigation = DOY_Last_Scheduled_Irrigation + 1
-                else:
-                    if (DOY_Last_Scheduled_Irrigation > Emergence_DOY_2) and (DOY_Last_Scheduled_Irrigation <= Maturity_DOY_2):
-                        irrigation.DOY_To_Start_Auto_Irrigation = DOY_Last_Scheduled_Irrigation + 1
+                #04252025COS-LML if irrigation.Irrigated_Crop_Number == 1:
+                #04252025COS-LML     if (DOY_Last_Scheduled_Irrigation > Emergence_DOY_1 or DOY_Last_Scheduled_Irrigation > 1) and (DOY_Last_Scheduled_Irrigation <= Maturity_DOY_1):
+                #04252025COS-LML         irrigation.DOY_To_Start_Auto_Irrigation = DOY_Last_Scheduled_Irrigation + 1
+                #04252025COS-LML else:
+                #04252025COS-LML     if (DOY_Last_Scheduled_Irrigation > Emergence_DOY_2) and (DOY_Last_Scheduled_Irrigation <= Maturity_DOY_2):
+                #04252025COS-LML         irrigation.DOY_To_Start_Auto_Irrigation = DOY_Last_Scheduled_Irrigation + 1
             elif irrigation.Event_Type == "STOP":
                 irrigation.DOY_To_Stop_Auto_Irrigation = irrigation.DOY_Event 
             elif irrigation.Event_Type == "REFILL":

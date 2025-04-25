@@ -113,6 +113,7 @@ class SoilFlux:
     
     Fertilization_Rate = dict() #(366) As Double
     N_Leaching = dict() #(366) As Double
+    N_Leaching_Accumulated = dict() #(366) As Double
     Deep_Drainage = dict() #(366) As Double
     Chemical_Balance = dict() #(366) As Double
     Water_Balance = dict() #(366) As Double
@@ -210,7 +211,13 @@ def InitSoilState(pSoilState):
         pSoilState.Layer_Hourly_Soil_Temperature[i] = dict()
         for j in range(1,25):
             pSoilState.Layer_Hourly_Soil_Temperature[i][j] = 0.
-            
+    
+    pSoilState.PAW_Trigger = False
+    pSoilState.CWSI_Trigger = False
+    pSoilState.Refill_Today = False
+    pSoilState.Number_Of_Events = 0
+    pSoilState.Method = 0
+    
 def InitSoilFlux(pSoilFlux):
     for i in range(1,367):
         pSoilFlux.Mineralization_Top_Three_Layers[i] = 0.
@@ -222,6 +229,7 @@ def InitSoilFlux(pSoilFlux):
         
         pSoilFlux.Fertilization_Rate[i] = 0.
         pSoilFlux.N_Leaching[i] = 0.
+        pSoilFlux.N_Leaching_Accumulated[i] = 0.
         pSoilFlux.Deep_Drainage[i] = 0.
         pSoilFlux.Chemical_Balance[i] = 0.
         pSoilFlux.Water_Balance[i] = 0.
@@ -242,12 +250,12 @@ def InitSoilFlux(pSoilFlux):
     
     pSoilFlux.Cumulative_Deep_Drainage = 0.
     pSoilFlux.Cumulative_N_Leaching = 0.
+    pSoilFlux.Cumulative_Irrigation = 0.
+    pSoilFlux.Cumulative_Fertilization = 0.
     pSoilFlux.Sum_N_Fertilization = 0.
     
     pSoilFlux.Simulation_Total_N_Leaching = 0.
     pSoilFlux.Simulation_Total_Deep_Drainage = 0.
-    pSoilFlux.Cumulative_Irrigation = 0.
-    pSoilFlux.Cumulative_Fertilization = 0.
     pSoilFlux.Simulation_Total_Irrigation = 0.
     pSoilFlux.Simulation_Total_Fertilization = 0.
 
@@ -382,6 +390,11 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
     C = dict() #'Chemical concentration in the soil solution (kg/kg)
     WD = 1000  #'water density in kg/m3
     
+    if DOY == 1: 
+        Adj_DOY = 365
+    else: 
+        Adj_DOY = DOY - 1
+    
     Drainage = 0 #'Initialize drainage flux
     Chemical_Leaching = 0
     #'Calculates initial soil water profile (kg/m2 or mm) and total chemical mass in the soil profile (kg/m2)
@@ -457,13 +470,16 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
     
     if Number_Of_Pulses == 0:
         Water_Depth_Equivalent_Of_One_Pore_Volume = WD * dz[2] * FC[2]
-        Number_Of_Pulses = 1 + int(Water_Flux_In / (0.2 * Water_Depth_Equivalent_Of_One_Pore_Volume))
+        #Number_Of_Pulses = 1 + int(Water_Flux_In / (0.2 * Water_Depth_Equivalent_Of_One_Pore_Volume))
+        Number_Of_Pulses = 1 + int(Water_Flux_In / Water_Depth_Equivalent_Of_One_Pore_Volume)  #'Mingliang 4/23/2025
+        if Number_Of_Pulses > 6: Number_Of_Pulses = 6   #'Mingliang 4/23/2025
 
     #k & Q !!!
     k = 0
     Q = 0
     #print(f'Number_Of_Pulses:{Number_Of_Pulses} Water_Flux_In:{Water_Flux_In} Water_Depth_Equivalent_Of_One_Pore_Volume:{Water_Depth_Equivalent_Of_One_Pore_Volume}')
-    
+    Cumulative_Pulse_Deep_Drainage = 0  #'Mingliang 4/23/2025
+    Cumulative_Pulse_N_Leaching = 0 #'Mingliang 4/23/2025
     for i in range(1, Number_Of_Pulses + 1):
         Win = Water_Flux_In / Number_Of_Pulses
         Conc_In = Water_Chemical_Concentration
@@ -505,19 +521,22 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
             Win = Wout
             Conc_In = Conc_Out
             j += 1
-        Drainage += Wout     #'in mm/day = kg/m2/day
-        Chemical_Leaching = Chemical_Leaching + Wout * Conc_Out
+        Drainage = Wout     #'in mm/day = kg/m2/day
+        Chemical_Leaching = Wout * Conc_Out
+        
+        Cumulative_Pulse_Deep_Drainage += Drainage #'mm   'Mingliang 4/23/2025
+        Cumulative_Pulse_N_Leaching += Chemical_Leaching #'kg/m2 'Mingliang 4/23/2025
     #'Calculates Final total chemical mass in the soil profile (kg/m2)
     Final_Profile_Chemical_Mass = 0
     for L in range(1, Number_Of_Layers + 1):
         Final_Profile_Chemical_Mass += Chem_Mass[L]
     pSoilFlux.Chemical_Balance[DOY] = (Initial_Profile_Chemical_Mass + Water_Flux_In * Water_Chemical_Concentration + Nitrate_N_Fertilization \
-               - (Final_Profile_Chemical_Mass + Chemical_Leaching)) * 10000 #'Convert kg/m2 to kg/ha
+               - (Final_Profile_Chemical_Mass + Cumulative_Pulse_N_Leaching)) * 10000 #'Convert kg/m2 to kg/ha
     #'Calculates final soil water profile (kg/m2 or mm)
     Final_Soil_Water_Profile = 0
     for L in range(1, Number_Of_Layers + 1):
         Final_Soil_Water_Profile += WC[L] * dz[L] * WD
-    pSoilFlux.Water_Balance[DOY] = (Initial_Soil_Water_Profile + Water_Flux_In - (Final_Soil_Water_Profile + Drainage))
+    pSoilFlux.Water_Balance[DOY] = (Initial_Soil_Water_Profile + Water_Flux_In - (Final_Soil_Water_Profile + Cumulative_Pulse_Deep_Drainage))
     
     if pSoilFlux.Water_Balance[DOY] > 0.0000000001:
         print('Water Balance Error')
@@ -528,20 +547,38 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
          pSoilState.Water_Content[DOY][Layer] = WC[Layer]
          pSoilState.Soil_Water_Potential[DOY][Layer] = WP(pSoilModelLayer.Saturation_Water_Content[Layer], pSoilState.Water_Content[DOY][Layer], pSoilModelLayer.Air_Entry_Potential[Layer], pSoilModelLayer.B_value[Layer]) #'Mingliang 4/16/2025
          pSoilState.Nitrate_N_Content[DOY][Layer] = Chem_Mass[Layer]
-         pSoilFlux.N_Leaching[DOY] = Chemical_Leaching #'kg/m2
-         pSoilFlux.Deep_Drainage[DOY] = Drainage  #'mm
+    pSoilFlux.N_Leaching[DOY] = Cumulative_Pulse_N_Leaching #'kg/m2
+    pSoilFlux.Deep_Drainage[DOY] = Cumulative_Pulse_Deep_Drainage  #'mm
     
     if CropActive:
-       pSoilFlux.Cumulative_Deep_Drainage += Drainage #'mm
-       pSoilFlux.Cumulative_N_Leaching += Chemical_Leaching * 10000 #'Convert kg/m2 to kg/ha
+       pSoilFlux.Cumulative_Deep_Drainage += Cumulative_Pulse_Deep_Drainage #'mm
+       pSoilFlux.Cumulative_N_Leaching += Cumulative_Pulse_N_Leaching * 10000 #'Convert kg/m2 to kg/ha
        pSoilFlux.Cumulative_Irrigation += NID
        pSoilFlux.Cumulative_Fertilization += Nitrate_N_Fertilization + Ammonium_N_Fertilization
+       pSoilFlux.N_Leaching_Accumulated[DOY] = pSoilFlux.N_Leaching_Accumulated[Adj_DOY] + Cumulative_Pulse_N_Leaching * 10000 #'Convert kg/m2 to kg/ha     'Mingliang 4/23/2025
     
     pSoilFlux.Simulation_Total_Deep_Drainage += Drainage #'mm
     pSoilFlux.Simulation_Total_N_Leaching += Chemical_Leaching * 10000 #'Convert kg/m2 to kg/ha
     pSoilFlux.Simulation_Total_Irrigation += NID
     pSoilFlux.Simulation_Total_Fertilization += Nitrate_N_Fertilization + Ammonium_N_Fertilization
     
+    #'Calculate daily soil water content output for top, mid, and bottom layers. Mingliang 4/23/2025: I moved this code here from SetAutoIrrigation
+    #'Begin Moved Code
+    Top50cm_WC = 0
+    Mid50cm_WC = 0
+    Bottom50cm_WC = 0
+    for Layer in range(1, Number_Of_Layers + 1): #'Mingliang 4/23/2025 I DECIDED TO CHANGE THE LAYERS INVOLVED. I WAS NOT INCLUDING THE TOP EVAPORATION LAYER 1
+        if Layer >= 1 and Layer <= 5: #Then   'Mingliang 4/23/2025 It was layer 2 to 6
+            Top50cm_WC += pSoilState.Water_Content[DOY][Layer]
+        elif Layer >= 6 and Layer <= 10: #Then  'Mingliang 4/23/2025 It was layer 7 to 11
+            Mid50cm_WC += pSoilState.Water_Content[DOY][Layer]
+        elif Layer >= 11 and Layer <= 15: #Then 'Mingliang 4/23/2025 It was layer 12 to 16
+            Bottom50cm_WC += pSoilState.Water_Content[DOY][Layer]
+    #Next Layer
+    pSoilState.Water_Content_Top50cm[DOY] = Top50cm_WC / 5. #'Average of five soil layers
+    pSoilState.Water_Content_Mid50cm[DOY] = Mid50cm_WC / 5. #'Average of five soil layers
+    pSoilState.Water_Content_Bottom50cm[DOY] = Bottom50cm_WC / 5. #'Average of five soil layers
+    #'End Moved Code
     
     #'Begin NEW Mingliang
     #'Calculate daily N mass output for top, mid, and bottom layers. Also N mass leaching.
@@ -556,9 +593,9 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
         elif Layer >= 11 and Layer <= 15:
             Bottom50cm_N_Mass += pSoilState.Nitrate_N_Content[DOY][Layer] + pSoilState.Ammonium_N_Content[DOY][Layer]
 
-    pSoilState.N_Mass_Top50cm[DOY] = Top50cm_N_Mass * 10000 #'convert kg/m2 to kg/ha
-    pSoilState.N_Mass_Mid50cm[DOY] = Mid50cm_N_Mass * 10000 #'convert kg/m2 to kg/ha
-    pSoilState.N_Mass_Bottom50cm[DOY] = Bottom50cm_N_Mass * 10000 #'convert kg/m2 to kg/ha
+    pSoilState.N_Mass_Top50cm[DOY] = Top50cm_N_Mass * 10000 / 5. #'Average of five soil layers. Convert kg/m2 to kg/ha       'Mingliang 4/23/2025
+    pSoilState.N_Mass_Mid50cm[DOY] = Mid50cm_N_Mass * 10000 / 5. #'Average of five soil layers. Convert kg/m2 to kg/ha       'Mingliang 4/23/2025
+    pSoilState.N_Mass_Bottom50cm[DOY] = Bottom50cm_N_Mass * 10000 / 5. #'Average of five soil layers. Convert kg/m2 to kg/ha       'Mingliang 4/23/2025
     #'END NEW Mingliang
     
     return NID,(Nitrate_N_Fertilization + Ammonium_N_Fertilization)

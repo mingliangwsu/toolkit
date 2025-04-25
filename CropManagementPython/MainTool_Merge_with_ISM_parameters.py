@@ -349,17 +349,17 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     #'Mingliang: End of new section added
     
     
-    Cumulative_Deep_Drainage = 0
-    Cumulative_N_Leaching = 0
+    #Cumulative_Deep_Drainage = 0
+    #Cumulative_N_Leaching = 0
     
     #Percent_Sand = pSoilHorizen.Sand[1]
     #Thickness_Evaporative_Layer = round(-0.001 * Percent_Sand + 0.169, 1)
     #pSoilModelLayer.Layer_Thickness[1] = Thickness_Evaporative_Layer           #TODO 11/15/2024LML High risk since the soil properties already initialized with default layer depth
     #'Set simulation period accumulators to zero
-    pSoilFlux.Simulation_Total_N_Leaching = 0
-    pSoilFlux.Simulation_Total_Deep_Drainage = 0
-    pSoilFlux.Simulation_Total_Irrigation = 0
-    pSoilFlux.Simulation_Total_Fertilization = 0
+    #04252025COS-LML pSoilFlux.Simulation_Total_N_Leaching = 0
+    #04252025COS-LML pSoilFlux.Simulation_Total_Deep_Drainage = 0
+    #04252025COS-LML pSoilFlux.Simulation_Total_Irrigation = 0
+    #04252025COS-LML pSoilFlux.Simulation_Total_Fertilization = 0
     pSoilState.Auto_Irrigation = False
     
     for i in range(Run_First_Doy, Run_Last_Doy + 1):
@@ -367,12 +367,21 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
 
 def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs, 
                        pSoilFlux, pSoilState, pSoilModelLayer, 
-                       pETState):
+                       pETState, pCropGrowth):
+    
+    DOY_Of_Maturity = pCropGrowth.Maturity_DOY
+    DOY_Of_Harvest = pCropGrowth.Harvest_DOY
+    Last_DOY = DOY
+    if DOY_Of_Maturity > DOY_Of_Harvest:
+        Last_DOY = DOY_Of_Harvest - 1
+    else:
+        Last_DOY = DOY_Of_Maturity - 1 #'Mingliang 4/23/2025 ADD
+        
     Profile_Nitrate_Content = 0.
     Profile_Ammonium_Content = 0.
     for i in range(1, pSoilModelLayer.Number_Model_Layers + 1):
-        Profile_Nitrate_Content += pSoilState.Nitrate_N_Content[DOY - 1][i]
-        Profile_Ammonium_Content += pSoilState.Ammonium_N_Content[DOY - 1][i]
+        Profile_Nitrate_Content += pSoilState.Nitrate_N_Content[Last_DOY][i]
+        Profile_Ammonium_Content += pSoilState.Ammonium_N_Content[Last_DOY][i]
 
     CropSumColumns_data = {
         "Cumulative Deep Drainage(mm)": pSoilFlux.Cumulative_Deep_Drainage,
@@ -427,13 +436,13 @@ def WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs,
         #"PAW Depletion Top 50 cm (0-1)": pSoilState.PAW_Depletion_Top50cm[DOY],
         #"PAW Depletion Mid 50 cm (0-1)": pSoilState.PAW_Depletion_Mid50cm[DOY],
         #"PAW Depletion bottom 50 cm (0-1)": pSoilState.PAW_Depletion_Bottom50cm[DOY],
-        "Water Top 50 cm (m/m)": pSoilState.Water_Content_Top50cm[DOY],
-        "Water Mid 50 cm (m/m)": pSoilState.Water_Content_Mid50cm[DOY],
-        "Water bottom 50 cm (m/m)": pSoilState.Water_Content_Bottom50cm[DOY],
+        "Water Content Top 50 cm (0-1)": pSoilState.Water_Content_Top50cm[DOY],
+        "Water Content Mid 50 cm (0-1)": pSoilState.Water_Content_Mid50cm[DOY],
+        "Water Content bottom 50 cm (0-1)": pSoilState.Water_Content_Bottom50cm[DOY],
         "N Mass Top 50 cm (kg/ha)": pSoilState.N_Mass_Top50cm[DOY],
         "N Mass Mid 50 cm (kg/ha)": pSoilState.N_Mass_Mid50cm[DOY],
         "N Mass bottom 50 cm (kg/ha)": pSoilState.N_Mass_Bottom50cm[DOY],
-        "N Leaching (kg/ha)":pSoilFlux.N_Leaching[DOY] * 10000, #'Convert kg/m2 to kg/ha 'NEW Mingliang
+        "N Leaching (kg/ha)":pSoilFlux.N_Leaching_Accumulated[DOY] * 10000, #'Convert kg/m2 to kg/ha 'NEW Mingliang
         "Soil N Mass down to 150 cm (kg/ha)": pSoilState.N_Mass_Top50cm[DOY] + pSoilState.N_Mass_Mid50cm[DOY] + pSoilState.N_Mass_Bottom50cm[DOY],
         "N Uptake Rate (kg/ha/day)": (pCropState.Cumulative_N_Uptake[DOY] - preday_Cumulative_N_Uptake) * 10000 #'Convert kg/m2 to kg/ha
     }
@@ -458,7 +467,7 @@ def WriteTotalSimPeriodOutput(TotalSimPeriodOutput, RunLastDOY,
                               SoilLayers, pSoilState, pSoilFlux):
     Profile_Nitrate_Content = 0
     Profile_Ammonium_Content = 0
-    Last_Simulation_DOY = RunLastDOY - 1
+    Last_Simulation_DOY = RunLastDOY # - 1
     for i in range(1, SoilLayers + 1):
         Profile_Nitrate_Content += pSoilState.Nitrate_N_Content[Last_Simulation_DOY - 1][i]
         Profile_Ammonium_Content += pSoilState.Ammonium_N_Content[Last_Simulation_DOY - 1][i]
@@ -505,7 +514,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_04172025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_04252025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -521,7 +530,7 @@ cropCells = pd.read_csv(f'{data_path}/{crop_from_excel_csv}',header=None)
 SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
 
 #user option
-soil_propertities_from_SSURGO = True
+soil_propertities_from_SSURGO = False
 crop_growth_parameter_from_ISM = False
 weather_from_AgWeatherNet = False
 
@@ -666,9 +675,9 @@ CropColums = {
     #"PAW Depletion Top 50 cm (0-1)": "float64", #'NEW Mingliang
     #"PAW Depletion Mid 50 cm (0-1)": "float64", #'NEW Mingliang
     #"PAW Depletion bottom 50 cm (0-1)": "float64", #'NEW Mingliang
-    "Water Top 50 cm (m/m)": "float64", #'NEW Mingliang
-    "Water Mid 50 cm (m/m)": "float64", #'NEW Mingliang
-    "Water bottom 50 cm (m/m)": "float64", #'NEW Mingliang
+    "Water Content Top 50 cm (0-1)": "float64", #'NEW Mingliang
+    "Water Content Mid 50 cm (0-1)": "float64", #'NEW Mingliang
+    "Water Content bottom 50 cm (0-1)": "float64", #'NEW Mingliang
     "N Mass Top 50 cm (kg/ha)": "float64", #'NEW Mingliang
     "N Mass Mid 50 cm (kg/ha)": "float64", #'NEW Mingliang
     "N Mass bottom 50 cm (kg/ha)": "float64", #'NEW Mingliang
@@ -962,7 +971,7 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
         #DAE = 0
         pSoilState.Auto_Irrigation = False
 
-    if Crop_Number == 2 and DOY == CropGrowths[2].Maturity_DOY:
+    if Crop_Number == 2 and (DOY == CropGrowths[2].Maturity_DOY or DOY == CropGrowths[2].Harvest_DOY):
         Crop_Active = False
         #Crop_Number = 0
         #DAE = 0
@@ -1078,16 +1087,16 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
     #if DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY:
     #if Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY: output cumulations before harvest day
     #print(f'DOY:{DOY}')
-    if DOY == max(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY):
+    if Crop_Number == 1 and (DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY): #max(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY):
         WriteCropSummaryOutput(1, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
-                               pETState)
+                               pETState,CropGrowths[1])
         #print(f'WriteCropSummaryOutput:{DOY} Crop_Number:{Crop_Number} Maturity_DOY:{CropGrowths[1].Maturity_DOY} Harvest_DOY:{CropGrowths[1].Harvest_DOY}')
         #Crop_Number = 0
-    if Crop_Number == 2 and DOY == CropGrowths[2].Maturity_DOY:
+    if Crop_Number == 2 and (DOY == CropGrowths[2].Maturity_DOY or DOY == CropGrowths[2].Harvest_DOY):
         WriteCropSummaryOutput(2, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
-                               pETState)
+                               pETState,CropGrowths[2])
         
         
     if (Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY) or \
