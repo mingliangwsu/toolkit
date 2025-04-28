@@ -340,7 +340,7 @@ for DOY in range(Run_First_DOY, Run_Last_DOY+1):
         GrowHeight(DOY, pCropState, pCropParameter)
 
     PotET(DOY, False, pCropState, pCropParameter, pCS_Weather, pETState)
-    ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState)
+    ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState, Crop_Active)
     if Crop_Active:
         ActualTranspiration(DOY, pCropParameter, pSoilModelLayer, pCropState, pETState, pSoilState)
         Biomass(DOY, False, pCropState, pCropParameter, pCS_Weather, pETState)

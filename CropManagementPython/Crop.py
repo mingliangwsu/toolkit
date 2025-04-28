@@ -294,6 +294,7 @@ def InitializeCrop(DOY,pCropState,pSoilFlux,pCropParameter,pETState):
     pSoilFlux.CumulativeFertilization = 0.
     pSoilFlux.CumulativeDeepDrainage = 0.
     pSoilFlux.CumulativeNLeaching = 0.
+    pETState.Crop_Soil_Water_Evaporation = 0.
     pETState.Total_Transpiration = 0.
     pCropState.Seasonal_N_Uptake = 0.
 

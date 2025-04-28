@@ -98,14 +98,14 @@ def ClearArrays(pSoilstate,pSoilFlux):
             pSoilFlux.Layer_Mineralization[i][j] = 0
 
     #'Clear accumulators
-    pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop1 = 0
-    pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop1 = 0
-    pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop2 = 0
-    pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop2 = 0
+    #pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop1 = 0
+    #pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop1 = 0
+    #pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop2 = 0
+    #pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop2 = 0
     pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_All_Days = 0
     pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_All_Days = 0
 
-def Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux):
+def Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux, Crop_Active):
     #Residue_Mass = dict() #(6) As Double
     #Residue_N_Concentration = dict() #(6) As Double
     #Percent_SOM = dict() #(6) As Double
@@ -169,7 +169,7 @@ def Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux):
     pSoilFlux.Mineralization_Top_Three_Layers[DOY] = pSoilFlux.Layer_Mineralization[DOY][1] + pSoilFlux.Layer_Mineralization[DOY][2] + pSoilFlux.Layer_Mineralization[DOY][3]
     pSoilFlux.Mineralization_Next_Three_Layers[DOY] = pSoilFlux.Layer_Mineralization[DOY][4] + pSoilFlux.Layer_Mineralization[DOY][5] + pSoilFlux.Layer_Mineralization[DOY][6]
     #'Cumulative mineralization from emergence to maturity of crop number one
-    if Crop_Number > 0:
+    if Crop_Number > 0 and Crop_Active:
         pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop[Crop_Number] += pSoilFlux.Mineralization_Top_Three_Layers[DOY]
         pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop[Crop_Number] += pSoilFlux.Mineralization_Next_Three_Layers[DOY]
 

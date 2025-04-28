@@ -157,6 +157,7 @@ class ETState:
     Soil_Water_Uptake = dict() #(366,20)
     Total_Transpiration = 0.
     Cumulative_Soil_Water_Evaporation = 0 #'Mingliang 4/17/2025
+    Crop_Soil_Water_Evaporation = 0
 
 
 def InitSoilState(pSoilState):
@@ -833,7 +834,7 @@ def CalculateRootFraction(z, dz, Rd):
     return f
 
 
-def ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState):
+def ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState, Crop_Active):
     WD = 1000 #'kg/m3
     Residue_Fraction_Solar_Interception = 0 #'Currently not implemented
     #Percent_Sand_Top_Layer = pSoilModelLayer.Percent_Sand[1]
@@ -855,6 +856,8 @@ def ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState):
     pETState.Cumulative_Soil_Water_Evaporation += pETState.Actual_Soil_Water_Evaporation[DOY]   #'Mingliang 4/17/2025
     
     #Testing?
+    if Crop_Active:
+        pETState.Crop_Soil_Water_Evaporation += pETState.Actual_Soil_Water_Evaporation[DOY] #'Mingliang 4/26/2025
     WC = pSoilState.Water_Content[DOY][1]
     Sat_WC = pSoilModelLayer.Saturation_Water_Content[1]
     AEP = pSoilModelLayer.Air_Entry_Potential[1]

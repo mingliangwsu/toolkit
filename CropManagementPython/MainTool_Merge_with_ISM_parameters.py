@@ -369,19 +369,19 @@ def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs,
                        pSoilFlux, pSoilState, pSoilModelLayer, 
                        pETState, pCropGrowth):
     
-    DOY_Of_Maturity = pCropGrowth.Maturity_DOY
-    DOY_Of_Harvest = pCropGrowth.Harvest_DOY
-    Last_DOY = DOY
-    if DOY_Of_Maturity > DOY_Of_Harvest:
-        Last_DOY = DOY_Of_Harvest - 1
-    else:
-        Last_DOY = DOY_Of_Maturity - 1 #'Mingliang 4/23/2025 ADD
+    #DOY_Of_Maturity = pCropGrowth.Maturity_DOY
+    #DOY_Of_Harvest = pCropGrowth.Harvest_DOY
+    #Last_DOY = DOY
+    #if DOY_Of_Maturity > DOY_Of_Harvest:
+    #    Last_DOY = DOY_Of_Harvest - 1
+    #else:
+    #    Last_DOY = DOY_Of_Maturity - 1 #'Mingliang 4/23/2025 ADD
         
     Profile_Nitrate_Content = 0.
     Profile_Ammonium_Content = 0.
     for i in range(1, pSoilModelLayer.Number_Model_Layers + 1):
-        Profile_Nitrate_Content += pSoilState.Nitrate_N_Content[Last_DOY][i]
-        Profile_Ammonium_Content += pSoilState.Ammonium_N_Content[Last_DOY][i]
+        Profile_Nitrate_Content += pSoilState.Nitrate_N_Content[DOY][i]
+        Profile_Ammonium_Content += pSoilState.Ammonium_N_Content[DOY][i]
 
     CropSumColumns_data = {
         "Cumulative Deep Drainage(mm)": pSoilFlux.Cumulative_Deep_Drainage,
@@ -393,10 +393,10 @@ def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs,
         "Cumulative irrigation (mm)": pSoilFlux.Cumulative_Irrigation,
         "Cumulative N fertilization (kg/ha)": pSoilFlux.Cumulative_Fertilization * 10000, #'Convert kg/m2 to kg/ha,
         "Seasonal Transpiration (mm)": pETState.Total_Transpiration,
-        "Seasonal Soil Water Evaporation (mm)": pETState.Cumulative_Soil_Water_Evaporation,
+        "Seasonal Soil Water Evaporation (mm)": pETState.Crop_Soil_Water_Evaporation,
         "Seasonal N Uptake (kg/ha)": pCropState.Seasonal_N_Uptake * 10000, # 'Convert kg/m2 to kg/ha ,
-        "Seasonal Potential Biomass (kg/ha)": pCropState.Cumulative_Potential_Crop_Biomass[DOY - 1] * 10000, # 'Convert kg/m2 to kg/ha,
-        "Seasonal Actual Biomass (kg/ha)": pCropState.Seasonal_Biomass * 10000 # 'Convert kg/m2 to kg/ha
+        "Expected Potential Biomass at maturity (kg/ha)": pCropState.Cumulative_Potential_Crop_Biomass[DOY - 1] * 10000, # 'Convert kg/m2 to kg/ha,
+        "Biomass at maturity or harvest, whichever is first (kg/ha)": pCropState.Seasonal_Biomass * 10000 # 'Convert kg/m2 to kg/ha
     }
     CropSumOutputs[Crop_Number].loc[len(CropSumOutputs[Crop_Number])] = CropSumColumns_data
     
@@ -514,7 +514,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_04252025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_04262025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -771,8 +771,8 @@ CropSumColums = {
     "Seasonal Transpiration (mm)": "float64",
     "Seasonal Soil Water Evaporation (mm)": "float64", #'Mingliang 4/17/2025
     "Seasonal N Uptake (kg/ha)": "float64",
-    "Seasonal Potential Biomass (kg/ha)": "float64",
-    "Seasonal Actual Biomass (kg/ha)": "float64"
+    "Expected Potential Biomass at maturity (kg/ha)": "float64",
+    "Biomass at maturity or harvest, whichever is first (kg/ha)": "float64"
     }
 
 CropSumOutputs = dict()
@@ -990,7 +990,7 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
         
         ActualTranspiration(DOY, CropParamaters[Crop_Number], pSoilModelLayer, 
                             pCropState, pETState, pSoilState)
-        ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState)
+        ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState, Crop_Active)
         Biomass(DOY, False, pCropState, CropParamaters[Crop_Number], 
                 pCS_Weather, pETState)
         
@@ -1003,11 +1003,11 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
         #DAE += 1
     else:
         PotET(DOY, False, False, pCropState, None, pCS_Weather, pETState) #Crop is not active and only potential evaporation is calculated
-        ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState)
+        ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState, False)
         
     SoilTemperature(DOY,pCS_Weather.Tmax[DOY],pCS_Weather.Tmin[DOY],
                     pSoilModelLayer,pSoilState)
-    Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux)
+    Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux, Crop_Active)
     Nitrification(DOY,pSoilModelLayer,pSoilState,pSoilFlux)
     
     
@@ -1087,13 +1087,13 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
     #if DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY:
     #if Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY: output cumulations before harvest day
     #print(f'DOY:{DOY}')
-    if Crop_Number == 1 and (DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY): #max(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY):
+    if Crop_Number == 1 and DOY == min(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY): #(DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY): #max(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY):
         WriteCropSummaryOutput(1, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
                                pETState,CropGrowths[1])
         #print(f'WriteCropSummaryOutput:{DOY} Crop_Number:{Crop_Number} Maturity_DOY:{CropGrowths[1].Maturity_DOY} Harvest_DOY:{CropGrowths[1].Harvest_DOY}')
         #Crop_Number = 0
-    if Crop_Number == 2 and (DOY == CropGrowths[2].Maturity_DOY or DOY == CropGrowths[2].Harvest_DOY):
+    if Crop_Number == 2 and DOY == min(CropGrowths[2].Maturity_DOY,CropGrowths[2].Harvest_DOY): #(DOY == CropGrowths[2].Maturity_DOY or DOY == CropGrowths[2].Harvest_DOY):
         WriteCropSummaryOutput(2, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
                                pETState,CropGrowths[2])
