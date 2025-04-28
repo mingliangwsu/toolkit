@@ -823,6 +823,8 @@ Crop_Active = False
 Run_First_Doy = int(get_excel_value(InputCells,'E5'))
 Crop_Active = False
 
+Already_Done_Crop_Sum_Output = {1 : False, 2 : False}                          #04282025LML control crop sum ouputs
+
 #crop_states = dict()
 
 pCropState = CropState()
@@ -1087,17 +1089,18 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
     #if DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY:
     #if Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY: output cumulations before harvest day
     #print(f'DOY:{DOY}')
-    if Crop_Number == 1 and DOY == min(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY): #(DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY): #max(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY):
+    if Crop_Number == 1 and (DOY == CropGrowths[1].Maturity_DOY or DOY == CropGrowths[1].Harvest_DOY) and Already_Done_Crop_Sum_Output[1] == False: #max(CropGrowths[1].Maturity_DOY,CropGrowths[1].Harvest_DOY):
         WriteCropSummaryOutput(1, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
                                pETState,CropGrowths[1])
+        Already_Done_Crop_Sum_Output[1] = True
         #print(f'WriteCropSummaryOutput:{DOY} Crop_Number:{Crop_Number} Maturity_DOY:{CropGrowths[1].Maturity_DOY} Harvest_DOY:{CropGrowths[1].Harvest_DOY}')
         #Crop_Number = 0
-    if Crop_Number == 2 and DOY == min(CropGrowths[2].Maturity_DOY,CropGrowths[2].Harvest_DOY): #(DOY == CropGrowths[2].Maturity_DOY or DOY == CropGrowths[2].Harvest_DOY):
+    if Crop_Number == 2 and (DOY == CropGrowths[2].Maturity_DOY or DOY == CropGrowths[2].Harvest_DOY) and Already_Done_Crop_Sum_Output[2] == False:
         WriteCropSummaryOutput(2, DOY, CropSumOutputs, 
                                pSoilFlux, pSoilState, pSoilModelLayer, 
                                pETState,CropGrowths[2])
-        
+        Already_Done_Crop_Sum_Output[2] = True
         
     if (Crop_Number == 1 and DOY == CropGrowths[1].Harvest_DOY) or \
        (Crop_Number == 2 and DOY == CropGrowths[2].Harvest_DOY):
