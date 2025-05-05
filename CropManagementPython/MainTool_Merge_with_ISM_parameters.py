@@ -607,14 +607,24 @@ CropGrowths = dict()
 CropParamaters = dict()
 
 for crop in range(1,Number_Of_Crops + 1):
+    col_letter = ''
     if crop == 1:
         CropNames[crop] = get_excel_value(InputCells,'A38')
-        col_letter = 'J'                                                       #crop paramater value column
+        #05052025LML col_letter = 'J'                                                       #crop paramater value column
         crop_row_index = 38                                                     #Crop growth parameters
     else:
         CropNames[crop] = get_excel_value(InputCells,'A39')
-        col_letter = 'L'  #crop paramater value column
+        #05052025LML col_letter = 'L'  #crop paramater value column
         crop_row_index = 39
+        
+    #05052025LML it's partially hardcoded for getting crop paramater from Excel sheet
+    #Enventially each crop should have their own txt file (file name is same as crop name)
+    if CropNames[crop].lower() == get_excel_value(cropCells,'J3').lower():
+        col_letter = 'J'
+    elif CropNames[crop].lower() == get_excel_value(cropCells,'L3').lower():
+        col_letter = 'L'
+    
+    
     ISM_cropname = ISM_cropnames[CropNames[crop]]
     CropGrowths[crop] = CropGrowth()
     CropParamaters[crop] = CropParameter()
