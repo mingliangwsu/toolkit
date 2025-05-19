@@ -11,6 +11,7 @@ from AutoIrrigation import *
 Thickness_Model_Layers = 0.1
 Carbon_Fraction_In_SOM = 0.58
 SOC_C_N_Ratio = 12. #kg/kg
+MAX_Number_Model_Layers = 20                                                   #05192025LML hard coded maximum soil layers
 
 class SoilHorizons:
     Number_Of_Horizons = 0
@@ -367,7 +368,7 @@ def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer):
             pSoilModelLayer.Fraction_Of_Silt[j] = pSoilHorizons.Silt[i] / 100 #'Convert percent to fraction
             pSoilModelLayer.Percent_Soil_Organic_Matter[j] = pSoilHorizons.Percent_Soil_Organic_Matter[i]
         Cum_J = L + 1
-    pSoilModelLayer.Number_Model_Layers = Cum_J - 1
+    pSoilModelLayer.Number_Model_Layers = min(MAX_Number_Model_Layers, Cum_J - 1) #05192025LML limit total soil layers to MAX_Number_Model_Layers
 
 def EquilibriumConcentration(Chemical_Mass, WC, DZ, BD, K, Q):
     WD = 1000 #'Water density (kg/m3)

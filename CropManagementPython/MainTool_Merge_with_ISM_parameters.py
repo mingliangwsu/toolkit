@@ -105,8 +105,10 @@ def ReadCropParameters(Cells,Crop,col_letter):
 def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
     #'Soil description
     pSoilHorizen.Number_Of_Horizons = int(get_excel_value(Cells,'A17'))
+    total_horizon_depth = 0  #05192025LML
     for i in range(1, pSoilHorizen.Number_Of_Horizons+1):
         pSoilHorizen.Horizon_Thickness[i] = float(Cells.iloc[22 + i - 1, 3 - 1]) #round(float(Cells.iloc[22 + i - 1, 3 - 1]),1) #'Thickness is rounded to one decimal
+        total_horizon_depth += pSoilHorizen.Horizon_Thickness[i]
         pSoilHorizen.Clay[i] = float(Cells.iloc[22 + i - 1, 4 - 1])
         pSoilHorizen.Silt[i] = float(Cells.iloc[22 + i - 1, 5 - 1])
         pSoilHorizen.Sand[i] = float(Cells.iloc[22 + i - 1, 6 - 1])
@@ -114,13 +116,20 @@ def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
         pSoilHorizen.PWP_WC[i] = float(Cells.iloc[22 + i - 1, 8 - 1])
         #pSoilHorizen.Soil_Organic_Carbon[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
         pSoilHorizen.Percent_Soil_Organic_Matter[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
+        
+    depth_deficit = MAX_Number_Model_Layers * Thickness_Model_Layers - total_horizon_depth #05192025LML
+    if depth_deficit < 0.: #05192025LML in case total horizon depth less than model required depth, extent the bottom horizon
+       pSoilHorizen.Horizon_Thickness[pSoilHorizen.Number_Of_Horizons] += round(-depth_deficit,1)
+       
 def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen):
     #'Soil description
     pSoilHorizen.Number_Of_Horizons = df_SSURGO.shape[0]
+    total_horizon_depth = 0  #05192025LML
     for i in range(1, pSoilHorizen.Number_Of_Horizons+1):
         t = df_SSURGO.loc[i-1,'hzdept_r']                                        #cm
         b = df_SSURGO.loc[i-1,'hzdepb_r']                                        #cm
         pSoilHorizen.Horizon_Thickness[i] = round((b - t) / 100.0,1)           #'Thickness is rounded to one decimal
+        total_horizon_depth += pSoilHorizen.Horizon_Thickness[i]
         pSoilHorizen.Clay[i] = float(df_SSURGO.loc[i-1, 'claytotal_r'])
         pSoilHorizen.Silt[i] = float(df_SSURGO.loc[i-1, 'silttotal_r'])
         pSoilHorizen.Sand[i] = float(df_SSURGO.loc[i-1, 'sandtotal_r'])
@@ -148,6 +157,11 @@ def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen):
             pSoilHorizen.Bulk_Dens[i] = -9999.0
         else:
             pSoilHorizen.Bulk_Dens[i] = float(df_SSURGO.loc[i-1, 'dbthirdbar_r'])
+
+    depth_deficit = MAX_Number_Model_Layers * Thickness_Model_Layers - total_horizon_depth #05192025LML
+    if depth_deficit < 0.: #05192025LML in case total horizon depth less than model required depth, extent the bottom horizon
+       pSoilHorizen.Horizon_Thickness[pSoilHorizen.Number_Of_Horizons] += round(-depth_deficit,1)
+        
 def ReadCropGrowth(Cells,pCropGrowth,row_idx):
     #'Soil description
     pCropGrowth.Crop_Name = get_excel_value(Cells,f'A{row_idx}')
@@ -411,7 +425,7 @@ def WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs,
             preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[365]
     else:
         preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[DOY - 1]
-        
+    
     CropOutRow = {
         "DAE": DAE,
         "DOY": DOY,
@@ -446,6 +460,9 @@ def WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs,
         "Soil N Mass down to 150 cm (kg/ha)": pSoilState.N_Mass_Top50cm[DOY] + pSoilState.N_Mass_Mid50cm[DOY] + pSoilState.N_Mass_Bottom50cm[DOY],
         "N Uptake Rate (kg/ha/day)": (pCropState.Cumulative_N_Uptake[DOY] - preday_Cumulative_N_Uptake) * 10000 #'Convert kg/m2 to kg/ha
     }
+    
+    #print(f'preday_Cumulative_N_Uptake: {preday_Cumulative_N_Uptake * 10000} today_cum: {pCropState.Cumulative_N_Uptake[DOY] * 10000} N Uptake Rate:{(pCropState.Cumulative_N_Uptake[DOY] - preday_Cumulative_N_Uptake) * 10000}')
+    
     CropOutputs[Crop_Number].loc[len(CropOutputs[Crop_Number])] = CropOutRow
         
 def WriteCropSoilOutput(Crop_Number, DOY, DAE, SoilLayers, SoilOutputs, 
@@ -514,10 +531,10 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_04262025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_04282025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
-fieldinput_from_excel_csv = 'Field_Input.csv'
+fieldinput_from_excel_csv = 'Field_Input_test.csv'
 soil_initial_excel_csv = 'Initial_Soil_Conditions.csv'
 
 crop_output_excel_csv = 'CropOutput.csv'

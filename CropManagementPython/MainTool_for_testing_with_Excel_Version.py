@@ -69,6 +69,7 @@ def ReadCropParameters(Cells,Crop,col_letter):
 def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
     #'Soil description
     pSoilHorizen.Number_Of_Horizons = int(get_excel_value(Cells,'A17'))
+    total_horizon_depth = 0  #05192025LML
     for i in range(1, pSoilHorizen.Number_Of_Horizons+1):
         pSoilHorizen.Horizon_Thickness[i] = float(Cells.iloc[22 + i - 1, 3 - 1]) #'Thickness is rounded to one decimal
         pSoilHorizen.Clay[i] = float(Cells.iloc[22 + i - 1, 4 - 1])
@@ -77,6 +78,13 @@ def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
         pSoilHorizen.FC_WC[i] = float(Cells.iloc[22 + i - 1, 7 - 1])
         pSoilHorizen.PWP_WC[i] = float(Cells.iloc[22 + i - 1, 8 - 1])
         pSoilHorizen.Soil_Organic_Carbon[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
+        total_horizon_depth += pSoilHorizen.Horizon_Thickness[i]
+        
+    depth_deficit = MAX_Number_Model_Layers * Thickness_Model_Layers - total_horizon_depth #05192025LML
+    if depth_deficit < 0.: #05192025LML in case total horizon depth less than model required depth, extent the bottom horizon
+       pSoilHorizen.Horizon_Thickness[pSoilHorizen.Number_Of_Horizons] += -depth_deficit
+    
+        
 def ReadCropGrowth(Cells,pCropGrowth,row_idx):
     #'Soil description
     pCropGrowth.Crop_Name = get_excel_value(Cells,f'A{row_idx}')
