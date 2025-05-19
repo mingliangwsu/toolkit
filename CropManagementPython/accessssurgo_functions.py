@@ -104,7 +104,7 @@ def get_dominant_mukey_muname_from_polygon(wkt_polygon, num_points=10):
     mykey_names = dict()
     for i, point in enumerate(random_points, 1):
         mk,mn,pc = get_mukey_muname_from_geocoordinate(point.x,point.y)
-        #print(f"Point {i}: {point.x}, {point.y} mukey:{mk} mukey_name:{mn}")
+        #print(f"Point {i}: {point.x:.3f}, {point.y:.3f} mukey:{mk} mukey_name:{mn}")
         if mk != None:
             mukeys.append(mk)
             mykey_names[mk] = mn

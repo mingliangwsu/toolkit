@@ -11,7 +11,7 @@ from AutoIrrigation import *
 Thickness_Model_Layers = 0.1
 Carbon_Fraction_In_SOM = 0.58
 SOC_C_N_Ratio = 12. #kg/kg
-MAX_Number_Model_Layers = 20                                                   #05192025LML hard coded maximum soil layers
+#MAX_Number_Model_Layers = 20                                                   #05192025LML hard coded maximum soil layers
 
 class SoilHorizons:
     Number_Of_Horizons = 0
@@ -368,7 +368,9 @@ def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer):
             pSoilModelLayer.Fraction_Of_Silt[j] = pSoilHorizons.Silt[i] / 100 #'Convert percent to fraction
             pSoilModelLayer.Percent_Soil_Organic_Matter[j] = pSoilHorizons.Percent_Soil_Organic_Matter[i]
         Cum_J = L + 1
-    pSoilModelLayer.Number_Model_Layers = min(MAX_Number_Model_Layers, Cum_J - 1) #05192025LML limit total soil layers to MAX_Number_Model_Layers
+    pSoilModelLayer.Number_Model_Layers = Cum_J - 1
+    print(f'pSoilModelLayer.Number_Model_Layers:{pSoilModelLayer.Number_Model_Layers}')
+    #pSoilModelLayer.Number_Model_Layers = min(MAX_Number_Model_Layers, Cum_J - 1) #05192025LML limit total soil layers to MAX_Number_Model_Layers
 
 def EquilibriumConcentration(Chemical_Mass, WC, DZ, BD, K, Q):
     WD = 1000 #'Water density (kg/m3)
@@ -595,9 +597,9 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
         elif Layer >= 11 and Layer <= 15:
             Bottom50cm_N_Mass += pSoilState.Nitrate_N_Content[DOY][Layer] + pSoilState.Ammonium_N_Content[DOY][Layer]
 
-    pSoilState.N_Mass_Top50cm[DOY] = Top50cm_N_Mass * 10000 / 5. #'Average of five soil layers. Convert kg/m2 to kg/ha       'Mingliang 4/23/2025
-    pSoilState.N_Mass_Mid50cm[DOY] = Mid50cm_N_Mass * 10000 / 5. #'Average of five soil layers. Convert kg/m2 to kg/ha       'Mingliang 4/23/2025
-    pSoilState.N_Mass_Bottom50cm[DOY] = Bottom50cm_N_Mass * 10000 / 5. #'Average of five soil layers. Convert kg/m2 to kg/ha       'Mingliang 4/23/2025
+    pSoilState.N_Mass_Top50cm[DOY] = Top50cm_N_Mass * 10000. #05192025COS_LML TOTAL / 5. #'Average of five soil layers. Convert kg/m2 to kg/ha       'Mingliang 4/23/2025
+    pSoilState.N_Mass_Mid50cm[DOY] = Mid50cm_N_Mass * 10000. #05192025COS_LML TOTAL / 5. #'Average of five soil layers. Convert kg/m2 to kg/ha       'Mingliang 4/23/2025
+    pSoilState.N_Mass_Bottom50cm[DOY] = Bottom50cm_N_Mass * 10000. #05192025COS_LML TOTAL / 5. #'Average of five soil layers. Convert kg/m2 to kg/ha       'Mingliang 4/23/2025
     #'END NEW Mingliang
     
     return NID,(Nitrate_N_Fertilization + Ammonium_N_Fertilization)

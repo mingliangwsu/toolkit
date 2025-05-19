@@ -117,9 +117,9 @@ def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
         #pSoilHorizen.Soil_Organic_Carbon[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
         pSoilHorizen.Percent_Soil_Organic_Matter[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
         
-    depth_deficit = MAX_Number_Model_Layers * Thickness_Model_Layers - total_horizon_depth #05192025LML
-    if depth_deficit < 0.: #05192025LML in case total horizon depth less than model required depth, extent the bottom horizon
-       pSoilHorizen.Horizon_Thickness[pSoilHorizen.Number_Of_Horizons] += round(-depth_deficit,1)
+    #depth_deficit = MAX_Number_Model_Layers * Thickness_Model_Layers - total_horizon_depth #05192025LML
+    #if depth_deficit > 0.: #05192025LML in case total horizon depth less than model required depth, extent the bottom horizon
+    #   pSoilHorizen.Horizon_Thickness[pSoilHorizen.Number_Of_Horizons] += round(depth_deficit,1)
        
 def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen):
     #'Soil description
@@ -158,9 +158,10 @@ def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen):
         else:
             pSoilHorizen.Bulk_Dens[i] = float(df_SSURGO.loc[i-1, 'dbthirdbar_r'])
 
-    depth_deficit = MAX_Number_Model_Layers * Thickness_Model_Layers - total_horizon_depth #05192025LML
-    if depth_deficit < 0.: #05192025LML in case total horizon depth less than model required depth, extent the bottom horizon
-       pSoilHorizen.Horizon_Thickness[pSoilHorizen.Number_Of_Horizons] += round(-depth_deficit,1)
+    #depth_deficit = MAX_Number_Model_Layers * Thickness_Model_Layers - total_horizon_depth #05192025LML
+    #print(f'depth_deficit:{depth_deficit} total_horizon_depth:{total_horizon_depth}')
+    #if depth_deficit > 0.: #05192025LML in case total horizon depth less than model required depth, extent the bottom horizon
+    #   pSoilHorizen.Horizon_Thickness[pSoilHorizen.Number_Of_Horizons] += round(depth_deficit,1)
         
 def ReadCropGrowth(Cells,pCropGrowth,row_idx):
     #'Soil description
@@ -335,6 +336,11 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
                 pSoilState.Soil_Organic_Carbon[DOY][j] = SOC
                 pSoilState.Soil_Organic_Nitrogen[DOY][j] = SOC / SOC_C_N_Ratio
         Cum_J = L + 1
+        #print(f'Cum_J:{Cum_J}')
+        #05192025 COS_LML
+        if Cum_J > Number_Initial_Conditions_Layers:
+            #print(f'Cum_J: {Cum_J} Number_Initial_Conditions_Layers:{Number_Initial_Conditions_Layers}')
+            break
     #Number_Model_Layers = Cum_J - 1
     #'Determine the thickness of the soil water evaporation layer
     #Percent_Sand = ReadInputs.PercentSand(1)
@@ -576,7 +582,7 @@ field_lon = -119.26
 wkt_geometry = f'point ({field_lon} {field_lat})'
 
 #test for polygon
-wkt_geometry = 'POLYGON((-119.265 45.972, -119.259 45.972,-119.259 45.968,-119.265 45.969,-119.265 45.972))'
+wkt_geometry = 'POLYGON((-119.745 46.263,-119.745 46.27,-119.72 46.27,-119.72 46.263,-119.745 46.263))'
 
 AnemomH = 1.5                                                                  #elevation of anemometer (m)
 
@@ -602,7 +608,7 @@ else:
         point = wkt.loads(wkt_geometry)
         mukey,muname,percent = get_mukey_muname_from_geocoordinate(point.x,point.y)
     else:
-        mukey,muname,percent = get_dominant_mukey_muname_from_polygon(wkt_geometry, 10)
+        mukey,muname,percent = get_dominant_mukey_muname_from_polygon(wkt_geometry, 20)
     if mukey is not None:
         #print(f'{mukey}:{muname}')
         result = get_all_components_soil_properties(mukey)
