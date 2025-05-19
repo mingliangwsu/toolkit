@@ -534,7 +534,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_04282025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
-fieldinput_from_excel_csv = 'Field_Input_test.csv'
+fieldinput_from_excel_csv = 'Field_Input.csv'
 soil_initial_excel_csv = 'Initial_Soil_Conditions.csv'
 
 crop_output_excel_csv = 'CropOutput.csv'
