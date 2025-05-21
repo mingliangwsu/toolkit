@@ -537,7 +537,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_04282025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_05192025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -560,8 +560,12 @@ weather_from_AgWeatherNet = False
 #02072025LML. For irrigation recommendation, the user need select either 
 #"PAW Depletion" or "CWSI" or "Refill" 
 #The user may choose different options every time
-Irrigation_Recommendation_Option = 'PAW Depletion' # 'CWSI' 'Refill' 
-Irrigation_Recommendation_Parameter = 0.5
+
+#05202025LML changed to use same method as auto-irrigation
+#Irrigation_Recommendation_Option = 'PAW Depletion' # 'CWSI' 'Refill' 
+#Irrigation_Recommendation_Parameter = 0.5
+Irrigation_Recommendation_Option = None
+Irrigation_Recommendation_Parameter = None
 
 #Farm and field description
 Farm_Name = get_excel_value(InputCells,'A5')
@@ -644,11 +648,10 @@ for crop in range(1,Number_Of_Crops + 1):
     #Enventially each crop should have their own txt file (file name is same as crop name)
     if CropNames[crop].lower() == get_excel_value(cropCells,'J3').lower():
         col_letter = 'J'
-    elif CropNames[crop].lower() == get_excel_value(cropCells,'L3').lower():
-        col_letter = 'L'
+    elif CropNames[crop].lower() == get_excel_value(cropCells,'K3').lower():
+        col_letter = 'K'
     
     
-    ISM_cropname = ISM_cropnames[CropNames[crop]]
     CropGrowths[crop] = CropGrowth()
     CropParamaters[crop] = CropParameter()
     
@@ -656,6 +659,7 @@ for crop in range(1,Number_Of_Crops + 1):
     ReadCropGrowth(InputCells,CropGrowths[crop],crop_row_index)
     
     if crop_growth_parameter_from_ISM:  #update some DOY parameters from ISM
+        ISM_cropname = ISM_cropnames[CropNames[crop]]
         GetISMCropGrowthDOYParameters(agWeatherStationID,ISM_cropname,pCropGrowth) #TODO
 
 #fertilization
@@ -683,6 +687,17 @@ else:
 ReadAutoIrrigation(InputCells,AutoIrrigations,DOY_Last_Scheduled_Irrigation,
                    Emergence_DOY_1,Maturity_DOY_1,Emergence_DOY_2,Maturity_DOY_2)
 
+
+#05202025LML create a look-up table to get autoirrigation parameters, including scheduling method
+autoirrigation_info = dict() #index by DOY; include DOY for stop auto irrigation
+for i in range(1, AutoIrrigations.Number_Of_Auto_Entries + 1):
+    if AutoIrrigations.Events[i].DOY_To_Start_Auto_Irrigation is not None:
+        if AutoIrrigations.Events[i].Scheduling_Method == 1: #PAW
+            autoirrigation_info[AutoIrrigations.Events[i].DOY_To_Start_Auto_Irrigation] = [1,AutoIrrigations.Events[i].Maximum_Allowable_PAW_Depletion]
+        elif AutoIrrigations.Events[i].Scheduling_Method == 2: #CWSI
+            autoirrigation_info[AutoIrrigations.Events[i].DOY_To_Start_Auto_Irrigation] = [2,AutoIrrigations.Events[i].Maximum_Allowable_CWSI]
+    elif AutoIrrigations.Events[i].DOY_To_Stop_Auto_Irrigation is not None:
+        autoirrigation_info[AutoIrrigations.Events[i].DOY_To_Stop_Auto_Irrigation] = [None, None]
 #agWeatherStation = '100031' #McNary
 CropColums = {
     "DAE": "int32",
@@ -1055,6 +1070,19 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
     #  SetAutoIrrigation(DOY, True, False, Number_Of_Layers, 
     #                        0.5, -9999, False, 
     #                        -9999, pSoilState, pETState, pSoilModelLayer)
+    
+    #05202025LML identify irrigation method for estimating recommendation
+    if DOY in autoirrigation_info:
+        if autoirrigation_info[DOY][0] == 1:
+            Irrigation_Recommendation_Option = 'PAW Depletion'
+            Irrigation_Recommendation_Parameter = autoirrigation_info[DOY][1]
+        elif autoirrigation_info[DOY][0] == 2:
+            Irrigation_Recommendation_Option = 'CWSI'
+            Irrigation_Recommendation_Parameter = autoirrigation_info[DOY][2]
+        else:
+            Irrigation_Recommendation_Option = None
+            Irrigation_Recommendation_Parameter = None
+    #print(f'{Irrigation_Recommendation_Option} {Irrigation_Recommendation_Parameter}')
     
     if Crop_Active and Irrigation_Recommendation_Option == 'PAW Depletion':
       Irrigation_Recommendation = \

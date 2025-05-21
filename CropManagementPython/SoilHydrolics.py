@@ -369,7 +369,7 @@ def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer):
             pSoilModelLayer.Percent_Soil_Organic_Matter[j] = pSoilHorizons.Percent_Soil_Organic_Matter[i]
         Cum_J = L + 1
     pSoilModelLayer.Number_Model_Layers = Cum_J - 1
-    print(f'pSoilModelLayer.Number_Model_Layers:{pSoilModelLayer.Number_Model_Layers}')
+    #print(f'pSoilModelLayer.Number_Model_Layers:{pSoilModelLayer.Number_Model_Layers}')
     #pSoilModelLayer.Number_Model_Layers = min(MAX_Number_Model_Layers, Cum_J - 1) #05192025LML limit total soil layers to MAX_Number_Model_Layers
 
 def EquilibriumConcentration(Chemical_Mass, WC, DZ, BD, K, Q):
