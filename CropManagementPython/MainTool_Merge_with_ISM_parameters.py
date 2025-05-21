@@ -300,7 +300,7 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     start_row_idx = 7 - 1
     end_row_idx = 16 - 1
     Number_Initial_Conditions_Layers = int(get_excel_value(Cells,'B3'))
-    Thickness_Model_Layers = 0.1
+    #Thickness_Model_Layers = 0.1
     
     Thickness = dict()
     Number_Of_Sublayers = dict()
@@ -312,7 +312,8 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     
     for i in range(1, Number_Initial_Conditions_Layers + 1):
         Thickness[i] = float(Cells.iloc[i + 6 - 1, 2 - 1])
-        Number_Of_Sublayers[i] = int(Thickness[i] / Thickness_Model_Layers + 0.5)
+        Number_Of_Sublayers[i] = round(Thickness[i] / Thickness_Model_Layers)
+        #print(f'i:{i} Number_Of_Sublayers:{Number_Of_Sublayers[i]}')
         Water[i] = float(Cells.iloc[i + 6 - 1, 3 - 1])
         Nitrate[i] = float(Cells.iloc[i + 6 - 1, 4 - 1]) / 10000 #'Convert kg/ha to kg/m2
         Ammonium[i] = float(Cells.iloc[i + 6 - 1, 5 - 1]) / 10000 #'Convert kg/ha to kg/m2
@@ -331,6 +332,7 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
                 pSoilState.Soil_Water_Potential[DOY][j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
                 pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / Number_Of_Sublayers[i]
                 pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] / Number_Of_Sublayers[i]
+                #print(f'Num_layers: {pSoilModelLayer.Number_Model_Layers} i:{i} j:{j} Nitrate_N_Content:{pSoilState.Nitrate_N_Content[DOY][j]} Ammonium:{pSoilState.Ammonium_N_Content[DOY][j]}')
                 pSoilModelLayer.Soil_Mass[j] = pSoilModelLayer.Bulk_Density[j] * 1000 * pSoilModelLayer.Layer_Thickness[j] #'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
                 SOC = pSoilModelLayer.Soil_Mass[j] * (pSoilModelLayer.Percent_Soil_Organic_Matter[j] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
                 pSoilState.Soil_Organic_Carbon[DOY][j] = SOC
@@ -338,9 +340,9 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
         Cum_J = L + 1
         #print(f'Cum_J:{Cum_J}')
         #05192025 COS_LML
-        if Cum_J > Number_Initial_Conditions_Layers:
-            #print(f'Cum_J: {Cum_J} Number_Initial_Conditions_Layers:{Number_Initial_Conditions_Layers}')
-            break
+        #if Cum_J > Number_Initial_Conditions_Layers:
+        #    #print(f'Cum_J: {Cum_J} Number_Initial_Conditions_Layers:{Number_Initial_Conditions_Layers}')
+        #    break
     #Number_Model_Layers = Cum_J - 1
     #'Determine the thickness of the soil water evaporation layer
     #Percent_Sand = ReadInputs.PercentSand(1)
@@ -521,6 +523,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
     BudgetOutRow["Water Use (in)"] = mm_to_inch(pETState.Actual_Transpiration[DOY] 
                                                 + pETState.Actual_Soil_Water_Evaporation[DOY])
     BudgetOutRow["Rain and Irrig (in)"] = mm_to_inch(pCS_Weather.Precipitation[DOY] + irrigations[DOY])
+    BudgetOutRow["Irrig (in)"] = mm_to_inch(irrigations[DOY])
     BudgetOutRow["PAW Depletion (0-1)"] = pSoilState.PAW_Depletion[DOY]   #"Water Deficit (in)": "float64", 
     BudgetOutRow["Irrigation_Recommendation (in)"] = mm_to_inch(Irrigation_Recommendation)
     BudgetOutRow["Water_Stress_Index (0-1)"] = pETState.Water_Stress_Index[DOY]
@@ -788,6 +791,7 @@ DailyBudgetColums = {
     "DOY": "int32",
     "Water Use (in)": "float64",
     "Rain and Irrig (in)": "float64", 
+    "Irrig (in)": "float64", 
     "PAW Depletion (0-1)": "float64", 
     "Irrigation_Recommendation (in)": "float64", 
     "Water_Stress_Index (0-1)": "float64", 
@@ -1101,6 +1105,7 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
                             Irrigation_Recommendation_Parameter, pSoilState, 
                             pETState, pSoilModelLayer, Water_Depth_To_Refill_fc)  
           
+    #print(f'Irrigation_Recommendation:{Irrigation_Recommendation} ')
     net_irrigation_today,fertilizer_today = \
         WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, 
                            Water_N_Conc, 
