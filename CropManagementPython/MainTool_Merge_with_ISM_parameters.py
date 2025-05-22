@@ -296,6 +296,7 @@ def GetAgWeatherNetDailyWeather(stationid,AnemomH_m,styear,stdoy,edyear, eddoy,p
     return good_data
     
 def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLayer,pSoilHorizen,pSoilFlux):
+    #NUnit: ppm ot kgN_ha
     InitSoilState(pSoilState)
     start_row_idx = 7 - 1
     end_row_idx = 16 - 1
@@ -310,13 +311,22 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     
     DOY = Run_First_Doy
     
+    #NUnit: ppm ot kgN_ha
+    if 'kg' in get_excel_value(Cells,'D6') and 'ha' in get_excel_value(Cells,'D6'):
+        NUnit = 'kgN_ha'
+    elif 'ppm' in get_excel_value(Cells,'D6'):
+        NUnit = 'ppm'
+    else:
+        NUnit = 'ppm'  #default
+
+    
     for i in range(1, Number_Initial_Conditions_Layers + 1):
         Thickness[i] = float(Cells.iloc[i + 6 - 1, 2 - 1])
         Number_Of_Sublayers[i] = round(Thickness[i] / Thickness_Model_Layers)
         #print(f'i:{i} Number_Of_Sublayers:{Number_Of_Sublayers[i]}')
         Water[i] = float(Cells.iloc[i + 6 - 1, 3 - 1])
-        Nitrate[i] = float(Cells.iloc[i + 6 - 1, 4 - 1]) / 10000 #'Convert kg/ha to kg/m2
-        Ammonium[i] = float(Cells.iloc[i + 6 - 1, 5 - 1]) / 10000 #'Convert kg/ha to kg/m2
+        Nitrate[i] = float(Cells.iloc[i + 6 - 1, 4 - 1]) 
+        Ammonium[i] = float(Cells.iloc[i + 6 - 1, 5 - 1]) 
     #'Distribute variables for each model layer of thickness 0.1 m
     Cum_J = 1
     for i in range(1, Number_Initial_Conditions_Layers + 1):
@@ -330,14 +340,20 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
                 pSoilState.Water_Filled_Porosity[DOY][j] = Water[i] / pSoilModelLayer.Saturation_Water_Content[i]
                 #pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
                 pSoilState.Soil_Water_Potential[DOY][j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
-                pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / Number_Of_Sublayers[i]
-                pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] / Number_Of_Sublayers[i]
-                #print(f'Num_layers: {pSoilModelLayer.Number_Model_Layers} i:{i} j:{j} Nitrate_N_Content:{pSoilState.Nitrate_N_Content[DOY][j]} Ammonium:{pSoilState.Ammonium_N_Content[DOY][j]}')
+                if NUnit == 'kgN_ha':
+                    pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / 10000. / Number_Of_Sublayers[i]    #'Convert kg/ha to kg/m2
+                    pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] / 10000. / Number_Of_Sublayers[i]  #'Convert kg/ha to kg/m2
+                elif NUnit == 'ppm':
+                    pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] * pSoilModelLayer.Bulk_Density[j] * pSoilModelLayer.Layer_Thickness[j] / 1000    #'Convert ppm to kg/m2
+                    pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] * pSoilModelLayer.Bulk_Density[j] * pSoilModelLayer.Layer_Thickness[j] / 1000. #'Convert ppm to kg/m2
+                    
+                #print(f'Num_layers: {pSoilModelLayer.Number_Model_Layers} NUnit:{NUnit} i:{i} j:{j} Bulk_Density:{pSoilModelLayer.Bulk_Density[j]} Nitrate_N_Content:{pSoilState.Nitrate_N_Content[DOY][j]} Ammonium:{pSoilState.Ammonium_N_Content[DOY][j]}')
                 pSoilModelLayer.Soil_Mass[j] = pSoilModelLayer.Bulk_Density[j] * 1000 * pSoilModelLayer.Layer_Thickness[j] #'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
                 SOC = pSoilModelLayer.Soil_Mass[j] * (pSoilModelLayer.Percent_Soil_Organic_Matter[j] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
                 pSoilState.Soil_Organic_Carbon[DOY][j] = SOC
                 pSoilState.Soil_Organic_Nitrogen[DOY][j] = SOC / SOC_C_N_Ratio
         Cum_J = L + 1
+        
         #print(f'Cum_J:{Cum_J}')
         #05192025 COS_LML
         #if Cum_J > Number_Initial_Conditions_Layers:
@@ -382,10 +398,12 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     #04252025COS-LML pSoilFlux.Simulation_Total_Deep_Drainage = 0
     #04252025COS-LML pSoilFlux.Simulation_Total_Irrigation = 0
     #04252025COS-LML pSoilFlux.Simulation_Total_Fertilization = 0
-    pSoilState.Auto_Irrigation = False
     
-    for i in range(Run_First_Doy, Run_Last_Doy + 1):
-        pSoilFlux.Net_Irrigation_Depth[DOY] = 0.                                #TODO
+    #05222025LML Move the following sections outside the initialization procedure
+    #pSoilState.Auto_Irrigation = False
+    #for i in range(Run_First_Doy, Run_Last_Doy + 1):
+    #    pSoilFlux.Net_Irrigation_Depth[DOY] = 0.                                #TODO
+    
 
 def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs, 
                        pSoilFlux, pSoilState, pSoilModelLayer, 
@@ -927,6 +945,11 @@ else:
 #ReadSoilInitial(Run_First_DOY,SoilInitCells,pSoilState,pSoilModelLayer)
 ReadSoilInitial(Run_First_Doy, Run_Last_Doy, SoilInitCells, pSoilState,
                 pSoilModelLayer, pSoilHorizen, pSoilFlux)
+
+#05222025LML moved here
+pSoilState.Auto_Irrigation = False
+for i in range(Run_First_Doy, Run_Last_Doy + 1):
+    pSoilFlux.Net_Irrigation_Depth[DOY] = 0.                                #TODO
 
 #First_Crop_Name = pCropGrowth.Crop_Name
 #Run_Last_DOY = CropGrowths[First_Crop_Name].Harvest_DOY
