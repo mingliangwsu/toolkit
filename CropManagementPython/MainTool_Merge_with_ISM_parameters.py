@@ -302,6 +302,8 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     start_row_idx = 7 - 1
     end_row_idx = 16 - 1
     Number_Initial_Conditions_Layers = int(get_excel_value(Cells,'B3'))
+    if Number_Initial_Conditions_Layers <= 0 or pd.isna(Number_Initial_Conditions_Layers): 
+        Number_Initial_Conditions_Layers = 10 #06042025LML initialize a big number
     #Thickness_Model_Layers = 0.1
     
     Thickness = dict()
@@ -320,14 +322,23 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     else:
         NUnit = 'ppm'  #default
 
+    #06042025LML added check thickness
+    valid_Number_Initial_Conditions_Layers = 0
     
     for i in range(1, Number_Initial_Conditions_Layers + 1):
-        Thickness[i] = float(Cells.iloc[i + 6 - 1, 2 - 1])
-        Number_Of_Sublayers[i] = round(Thickness[i] / Thickness_Model_Layers)
-        #print(f'i:{i} Number_Of_Sublayers:{Number_Of_Sublayers[i]}')
-        Water[i] = float(Cells.iloc[i + 6 - 1, 3 - 1])
-        Nitrate[i] = float(Cells.iloc[i + 6 - 1, 4 - 1]) 
-        Ammonium[i] = float(Cells.iloc[i + 6 - 1, 5 - 1]) 
+        thickness = float(Cells.iloc[i + 6 - 1, 2 - 1])
+        if not pd.isna(thickness) and thickness > 0:
+            valid_Number_Initial_Conditions_Layers += 1
+            Thickness[i] = float(Cells.iloc[i + 6 - 1, 2 - 1])
+            Number_Of_Sublayers[i] = round(Thickness[i] / Thickness_Model_Layers)
+            #print(f'i:{i} Number_Of_Sublayers:{Number_Of_Sublayers[i]}')
+            Water[i] = float(Cells.iloc[i + 6 - 1, 3 - 1])
+            Nitrate[i] = float(Cells.iloc[i + 6 - 1, 4 - 1]) 
+            Ammonium[i] = float(Cells.iloc[i + 6 - 1, 5 - 1]) 
+            
+    #print(f'valid_Number_Initial_Conditions_Layers: {valid_Number_Initial_Conditions_Layers} Number_Initial_Conditions_Layers:{Number_Initial_Conditions_Layers}')
+          
+    Number_Initial_Conditions_Layers = valid_Number_Initial_Conditions_Layers  #06042025LML
     #'Distribute variables for each model layer of thickness 0.1 m
     Cum_J = 1
     for i in range(1, Number_Initial_Conditions_Layers + 1):
