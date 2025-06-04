@@ -208,6 +208,8 @@ def CarbonNitrogenChanges(DOY, Layer,pSoilModelLayer,pSoilState,pSoilFlux):
                                          math.pow(pSoilState.SOM_C_Pool[DOY][Layer] / pSoilState.Saturation_Carbon_Conc_kg_Per_m2,
                                          Empirical_Constant_m) * \
                                          min(pSoilState.Oxidation_Temperature_Function[Layer], pSoilState.Oxidation_Water_Function[Layer]) * Tillage_Effect
+                                        
+    pSoilFlux.Layer_SOC_Pool_Oxidation = Layer_SOC_Pool_Oxidation              #06042025 LML
                                          
     #print(f'Layer_SOC_Pool_Oxidation:{Layer_SOC_Pool_Oxidation} SOM:{pSoilState.SOM_C_Pool[DOY][Layer]} Saturation_Carbon_Conc_kg_Per_m2:{pSoilState.Saturation_Carbon_Conc_kg_Per_m2} Empirical_Constant_m:{Empirical_Constant_m}')
     #Layer_Oxidized_SOM_C_Transfer_To_CO2 = pSoilFlux.Layer_SOC_Pool_Oxidation * (1 - Microbial_Biomass_Synthesis_Efficiency)

@@ -121,7 +121,8 @@ def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
     #if depth_deficit > 0.: #05192025LML in case total horizon depth less than model required depth, extent the bottom horizon
     #   pSoilHorizen.Horizon_Thickness[pSoilHorizen.Number_Of_Horizons] += round(depth_deficit,1)
        
-def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen):
+def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen,bNotUseFC_PWP_Sat_WC):
+    #06042025LML added bNotUseFC_PWP_Sat_WC to let model calculate these properties
     #'Soil description
     pSoilHorizen.Number_Of_Horizons = df_SSURGO.shape[0]
     total_horizon_depth = 0  #05192025LML
@@ -134,16 +135,16 @@ def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen):
         pSoilHorizen.Silt[i] = float(df_SSURGO.loc[i-1, 'silttotal_r'])
         pSoilHorizen.Sand[i] = float(df_SSURGO.loc[i-1, 'sandtotal_r'])
         pSoilHorizen.FC_WP[i] = -33.0 #kPa
-        if is_blank(df_SSURGO.loc[i-1, 'wthirdbar_r']):
+        if is_blank(df_SSURGO.loc[i-1, 'wthirdbar_r']) or bNotUseFC_PWP_Sat_WC:
             pSoilHorizen.FC_WC[i] = -9999.0
         else:
             pSoilHorizen.FC_WC[i] = float(df_SSURGO.loc[i-1, 'wthirdbar_r']) / 100.0
         pSoilHorizen.PWP_WP[i] = -1500.0 #kPa
-        if is_blank(df_SSURGO.loc[i-1, 'wfifteenbar_r']):
+        if is_blank(df_SSURGO.loc[i-1, 'wfifteenbar_r']) or bNotUseFC_PWP_Sat_WC:
             pSoilHorizen.PWP_WC[i] = -9999.0
         else:
             pSoilHorizen.PWP_WC[i] = float(df_SSURGO.loc[i-1, 'wfifteenbar_r']) / 100.0
-        if is_blank(df_SSURGO.loc[i-1, 'wsatiated_r']):
+        if is_blank(df_SSURGO.loc[i-1, 'wsatiated_r']) or bNotUseFC_PWP_Sat_WC:
             pSoilHorizen.Sat_WC[i] = -9999.0
         else:
             pSoilHorizen.Sat_WC[i] = float(df_SSURGO.loc[i-1, 'wsatiated_r']) / 100.0
@@ -312,9 +313,9 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     DOY = Run_First_Doy
     
     #NUnit: ppm ot kgN_ha
-    if 'kg' in get_excel_value(Cells,'D6') and 'ha' in get_excel_value(Cells,'D6'):
+    if 'kg' in get_excel_value(Cells,'D6').lower() and 'ha' in get_excel_value(Cells,'D6').lower():
         NUnit = 'kgN_ha'
-    elif 'ppm' in get_excel_value(Cells,'D6'):
+    elif 'ppm' in get_excel_value(Cells,'D6').lower():
         NUnit = 'ppm'
     else:
         NUnit = 'ppm'  #default
@@ -371,11 +372,13 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     NML = pSoilModelLayer.Number_Model_Layers #'Mingliang 4/15/2025 'This is the total number of simulation model layers 'Mingliang 4/15/2025
     for i in range(Number_Initialization_Layers + 1, NML + 1):
             pSoilModelLayer.Layer_Thickness[i] = pSoilModelLayer.Layer_Thickness[Number_Initialization_Layers]
-            pSoilState.Water_Content[DOY][i] =pSoilState.Water_Content[DOY][Number_Initialization_Layers]
+            pSoilState.Water_Content[DOY][i] = pSoilState.Water_Content[DOY][Number_Initialization_Layers]
             pSoilState.Water_Filled_Porosity[DOY][i] = pSoilState.Water_Content[DOY][i] / pSoilModelLayer.Saturation_Water_Content[i]
             #'Mingliang Soil water potential was changed to a two-dimensional array
             #'        Soil_Water_Potential(i) = WP(Saturation_Water_Content(i), Water_Content(DOY, i), Air_Entry_Potential(i), B_value(i))
+            
             pSoilState.Soil_Water_Potential[DOY][i] = WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
+
             pSoilState.Nitrate_N_Content[DOY][i] = pSoilState.Nitrate_N_Content[DOY][Number_Initialization_Layers]
             pSoilState.Ammonium_N_Content[DOY][i] = pSoilState.Ammonium_N_Content[DOY][Number_Initialization_Layers]
             #'        Initialize soil organi carbon and nitrogen
@@ -558,7 +561,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_05192025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_06032025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -575,6 +578,8 @@ SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
 
 #user option
 soil_propertities_from_SSURGO = False
+bNotUseFC_PWP_Sat_WC = False                                                    #06042025LML If use SSURGO data sets, use model to estimate FC, PWP, and Sat WC
+
 crop_growth_parameter_from_ISM = False
 weather_from_AgWeatherNet = False
 
@@ -596,7 +601,7 @@ Field_Name = get_excel_value(InputCells,'D12') #'test1'   #McNary 100031
 Area = float(get_excel_value(InputCells,'A12'))
 Irrigation_Method = get_excel_value(InputCells,'B12')
 Water_Source = int(get_excel_value(InputCells,'C12'))                          #1: River 2: Canal 3: Groundwater
-Water_N_Conc = float(get_excel_value(InputCells,'D12'))
+Water_N_Conc = float(get_excel_value(InputCells,'D12')) #(mg/L)
 
 ISM_cropnames = {'Triticale': 'Triticale (for forage)','Silage Corn': 'Corn (silage)'}  #TODO
 
@@ -643,7 +648,7 @@ else:
         max_cmppct = result['comppct_r'].max()
         max_cmppct_rows = result[result['comppct_r'] == max_cmppct]
         max_cmppct_rows_unique_rows = max_cmppct_rows.drop_duplicates(subset=['ch.chkey'], keep='first').sort_values(by='hzdept_r').reset_index(drop=True)
-        GetSoilHorizonParamegtersFromSSURGO(max_cmppct_rows_unique_rows,pSoilHorizen)
+        GetSoilHorizonParamegtersFromSSURGO(max_cmppct_rows_unique_rows,pSoilHorizen,bNotUseFC_PWP_Sat_WC)
     else:
         print('Warning: Cannot find SSURGO data for this field!')
 CalculateHydraulicProperties(pSoilHorizen.Number_Of_Horizons,pSoilHorizen,pSoilModelLayer)
@@ -949,7 +954,7 @@ ReadSoilInitial(Run_First_Doy, Run_Last_Doy, SoilInitCells, pSoilState,
 #05222025LML moved here
 pSoilState.Auto_Irrigation = False
 for i in range(Run_First_Doy, Run_Last_Doy + 1):
-    pSoilFlux.Net_Irrigation_Depth[DOY] = 0.                                #TODO
+    pSoilFlux.Net_Irrigation_Depth[i] = 0.                                     #TODO
 
 #First_Crop_Name = pCropGrowth.Crop_Name
 #Run_Last_DOY = CropGrowths[First_Crop_Name].Harvest_DOY
@@ -1150,9 +1155,12 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
             "Irrigation (mm)": net_irrigation_today,
             "Fertilizer (kg/ha)": fertilizer_today * 10000 #  'Convert kg/m2 to kg/ha
             }
-    
-    BalancesAll(DOY,pBalance,pSoilState,pSoilFlux,pSoilModelLayer,pCS_Weather,
+    pSoilFlux.Net_Irrigation_Depth[DOY] = net_irrigation_today                 #06042025
+    balance_item,account,balance = BalancesAll(DOY,pBalance,pSoilState,pSoilFlux,pSoilModelLayer,pCS_Weather,
                 pETState,pCS_Fertilization,pCropState)
+    if balance == False:
+        print(f'Balance error!\n{balance_item},{account},{balance}')
+        #sys.exit(1) 
     
     #'Write Daily and summary Outputs by crop number at harvest time
     

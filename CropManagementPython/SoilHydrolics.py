@@ -60,6 +60,7 @@ class SoilState:
     
     Soil_Organic_Carbon = dict() #(365, 20) As Double
     Soil_Organic_Nitrogen = dict() #(365, 20) As Double
+    Nitrate_N_In_Water = dict() #(kg) (366) As Double  'Mingliang June 3
     
     SOM_C_Pool = dict() #(366, 20) As Double
     SOM_N_Pool = dict() #(366, 20) As Double
@@ -199,6 +200,8 @@ def InitSoilState(pSoilState):
         pSoilState.N_Mass_Mid50cm[i] = 0. #'NEW Mingliang
         pSoilState.N_Mass_Bottom50cm[i] = 0. #'NEW Mingliang
         
+        pSoilState.Nitrate_N_In_Water[i] = 0.
+        
         pSoilState.Profile_Nitrate_N_Content[i] = 0.
         pSoilState.Profile_Ammonium_N_Content[i] = 0.
         #pSoilState.N_Leaching[i] = 0.
@@ -333,18 +336,20 @@ def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer):
         Silt = pSoilHorizons.Silt[i]
         pSoilHorizons.AE_Pot[i] = AE(Sand, Clay)
         pSoilHorizons.B_Val[i] = B(Sand, Clay)
-        if i not in pSoilHorizons.FC_WP or pSoilHorizons.FC_WP[i] == -9999.0:
+        if i not in pSoilHorizons.FC_WP or pSoilHorizons.FC_WP[i] == -9999.0 or pd.isna(pSoilHorizons.FC_WP[i]):
             pSoilHorizons.FC_WP[i] = WPFC(Clay, Silt)
         pSoilHorizons.PWP_WP[i] = -1500
-        if i not in pSoilHorizons.Bulk_Dens or pSoilHorizons.Bulk_Dens[i] <= 0:
+        if i not in pSoilHorizons.Bulk_Dens or pSoilHorizons.Bulk_Dens[i] <= 0 or pd.isna(pSoilHorizons.Bulk_Dens[i]):
             pSoilHorizons.Bulk_Dens[i] = BD(Sand, Clay)
-        if i not in pSoilHorizons.Sat_WC or pSoilHorizons.Sat_WC[i] <= 0:
+        if i not in pSoilHorizons.Sat_WC or pSoilHorizons.Sat_WC[i] <= 0 or pd.isna(pSoilHorizons.Sat_WC[i]):
             pSoilHorizons.Sat_WC[i] = WS(Sand, Clay)
-        if i not in pSoilHorizons.FC_WC or pSoilHorizons.FC_WC[i] <= 0: 
+        if i not in pSoilHorizons.FC_WC or pSoilHorizons.FC_WC[i] <= 0 or pd.isna(pSoilHorizons.FC_WC[i]): 
             pSoilHorizons.FC_WC[i] = WC(pSoilHorizons.Sat_WC[i], pSoilHorizons.FC_WP[i], pSoilHorizons.AE_Pot[i], pSoilHorizons.B_Val[i])
-        if i not in pSoilHorizons.PWP_WC or pSoilHorizons.PWP_WC[i] <= 0: 
+        if i not in pSoilHorizons.PWP_WC or pSoilHorizons.PWP_WC[i] <= 0 or pd.isna(pSoilHorizons.PWP_WC[i]): 
             pSoilHorizons.PWP_WC[i] = WC(pSoilHorizons.Sat_WC[i], pSoilHorizons.PWP_WP[i], pSoilHorizons.AE_Pot[i], pSoilHorizons.B_Val[i])
         pSoilHorizons.Number_Of_Sublayers[i] = int(pSoilHorizons.Horizon_Thickness[i] / Thickness_Model_Layers + 0.5)
+        
+        #print(f'{i} FC_WP:{pSoilHorizons.FC_WP[i]} Bulk_Dens:{pSoilHorizons.Bulk_Dens[i]} FC_WC:{pSoilHorizons.FC_WC[i]} PWP_WC:{pSoilHorizons.PWP_WC[i]}')
     #'Distribute properties for each model layer of thickness 0.1 m
     Cum_J = 1
     for i in range(1, N_Horz+1):
@@ -461,13 +466,16 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
     pSoilState.Ammonium_N_Content[DOY][2] += Ammonium_N_Fertilization #'NH4-N fertilizer added to the second layer, BUT NOT transported by water
     Chem_Mass[2] += Nitrate_N_Fertilization #'Only nitrate is considered for water transport
 
-
     Water_Flux_In = NID + Prec
     Irrig_Chemical_Conc = WaterNConc
     Precip_Chemical_Conc = 0
     Water_Chemical_Concentration = 0
-    if Water_Flux_In > 0: Water_Chemical_Concentration = (Irrig_Chemical_Conc * NID + Precip_Chemical_Conc * Prec) / Water_Flux_In
-    
+    if Water_Flux_In > 0: 
+        #Water_Chemical_Concentration = (Irrig_Chemical_Conc * NID + Precip_Chemical_Conc * Prec) / Water_Flux_In
+        if NID > 0:
+            pSoilState.Nitrate_N_In_Water[DOY] = Irrig_Chemical_Conc * NID / 1000000. # 'Convert mg/l to kg  'Mingliang June 3
+        Water_Chemical_Concentration = (Irrig_Chemical_Conc * NID + Precip_Chemical_Conc * Prec) / Water_Flux_In #'mg/l 'Mingliang June 3
+        Water_Chemical_Concentration = Water_Chemical_Concentration / 1000000. #  'Convert mg/l to kg/kg  'Mingliang June 3
     Number_Of_Pulses = 0  #CHECK!!!
     
     #'Calculate pore volume equivalent of each water pulse
@@ -846,6 +854,7 @@ def ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState, Crop_Active):
     Air_Dry_Water_Content = Permanent_Wilting_Point / 3
     #'Evaporation_Soil_Depth = Round(0.169 - 0.001 * Percent_Sand_Top_Layer, 2)
     Pot_Soil_Water_Evap = pETState.Potential_Soil_Water_Evaporation[DOY] * (1 - Residue_Fraction_Solar_Interception)
+    
     if Water_Content_Top_layer > Permanent_Wilting_Point: 
         pETState.Actual_Soil_Water_Evaporation[DOY] = Pot_Soil_Water_Evap  #'Soil evaporation in mm/day = kg/m2/day
     elif Water_Content_Top_layer > Air_Dry_Water_Content:
@@ -865,6 +874,9 @@ def ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState, Crop_Active):
     Sat_WC = pSoilModelLayer.Saturation_Water_Content[1]
     AEP = pSoilModelLayer.Air_Entry_Potential[1]
     B_Val = pSoilModelLayer.B_value[1]
+    
+    #if WC < 1.e-12: WC = 1.e-12  #06032025 LML
+    
     pSoilState.Soil_Water_Potential[DOY][1] = WP(Sat_WC, WC, AEP, B_Val)
     pSoilState.Water_Filled_Porosity[DOY][1] = WC / Sat_WC
     
