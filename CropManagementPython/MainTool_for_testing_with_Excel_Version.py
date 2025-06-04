@@ -146,7 +146,7 @@ def ReadSoilInitial(DOY, Cells,pSoilState,pSoilModelLayer):
     
     for i in range(1, Number_Initial_Conditions_Layers + 1):
         Thickness[i] = float(Cells.iloc[i + 6 - 1, 2 - 1])
-        Number_Of_Sublayers[i] = int(Thickness[i] / Thickness_Model_Layers + 0.5)
+        Number_Of_Sublayers[i] = round(Thickness[i] / Thickness_Model_Layers)
         Water[i] = float(Cells.iloc[i + 6 - 1, 3 - 1])
         Nitrate[i] = float(Cells.iloc[i + 6 - 1, 4 - 1]) / 10000 #'Convert kg/ha to kg/m2
         Ammonium[i] = float(Cells.iloc[i + 6 - 1, 5 - 1]) / 10000 #'Convert kg/ha to kg/m2

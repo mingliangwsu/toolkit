@@ -348,7 +348,8 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
         for j in range(k, L + 1):
             pSoilModelLayer.Layer_Thickness[j] = Thickness[i] / Number_Of_Sublayers[i]
             if j <= pSoilModelLayer.Number_Model_Layers:
-                pSoilState.Water_Content[DOY][j] = Water[i]
+                pSoilState.Water_Content[DOY][j] = min(pSoilModelLayer.FC_Water_Content[j], Water[i])
+                
                 pSoilState.Water_Filled_Porosity[DOY][j] = Water[i] / pSoilModelLayer.Saturation_Water_Content[i]
                 #pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
                 pSoilState.Soil_Water_Potential[DOY][j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
@@ -662,7 +663,7 @@ else:
         GetSoilHorizonParamegtersFromSSURGO(max_cmppct_rows_unique_rows,pSoilHorizen,bNotUseFC_PWP_Sat_WC)
     else:
         print('Warning: Cannot find SSURGO data for this field!')
-CalculateHydraulicProperties(pSoilHorizen.Number_Of_Horizons,pSoilHorizen,pSoilModelLayer)
+CalculateHydraulicProperties(pSoilHorizen.Number_Of_Horizons,pSoilHorizen,pSoilModelLayer,True) #06042025LML hard-coded to always calculate FC, PWP, and Sat WC
 
 #'Crop description
 Number_Of_Crops = int(get_excel_value(InputCells,'A31'))

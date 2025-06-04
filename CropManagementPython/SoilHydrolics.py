@@ -329,25 +329,25 @@ def k(KS, AE, B, WP):
     k = KS * math.pow((AE / WP), n)
     return k
 
-def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer):
+def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer,bNotUseFC_PWP_Sat_WC):
     for i in range(1, N_Horz+1):
         Clay = pSoilHorizons.Clay[i]
         Sand = pSoilHorizons.Sand[i]
         Silt = pSoilHorizons.Silt[i]
         pSoilHorizons.AE_Pot[i] = AE(Sand, Clay)
         pSoilHorizons.B_Val[i] = B(Sand, Clay)
-        if i not in pSoilHorizons.FC_WP or pSoilHorizons.FC_WP[i] == -9999.0 or pd.isna(pSoilHorizons.FC_WP[i]):
+        if i not in pSoilHorizons.FC_WP or pSoilHorizons.FC_WP[i] <= 0 or pd.isna(pSoilHorizons.FC_WP[i]):
             pSoilHorizons.FC_WP[i] = WPFC(Clay, Silt)
         pSoilHorizons.PWP_WP[i] = -1500
         if i not in pSoilHorizons.Bulk_Dens or pSoilHorizons.Bulk_Dens[i] <= 0 or pd.isna(pSoilHorizons.Bulk_Dens[i]):
             pSoilHorizons.Bulk_Dens[i] = BD(Sand, Clay)
-        if i not in pSoilHorizons.Sat_WC or pSoilHorizons.Sat_WC[i] <= 0 or pd.isna(pSoilHorizons.Sat_WC[i]):
+        if i not in pSoilHorizons.Sat_WC or pSoilHorizons.Sat_WC[i] <= 0 or pd.isna(pSoilHorizons.Sat_WC[i]) or bNotUseFC_PWP_Sat_WC:
             pSoilHorizons.Sat_WC[i] = WS(Sand, Clay)
-        if i not in pSoilHorizons.FC_WC or pSoilHorizons.FC_WC[i] <= 0 or pd.isna(pSoilHorizons.FC_WC[i]): 
+        if i not in pSoilHorizons.FC_WC or pSoilHorizons.FC_WC[i] <= 0 or pd.isna(pSoilHorizons.FC_WC[i]) or bNotUseFC_PWP_Sat_WC: 
             pSoilHorizons.FC_WC[i] = WC(pSoilHorizons.Sat_WC[i], pSoilHorizons.FC_WP[i], pSoilHorizons.AE_Pot[i], pSoilHorizons.B_Val[i])
-        if i not in pSoilHorizons.PWP_WC or pSoilHorizons.PWP_WC[i] <= 0 or pd.isna(pSoilHorizons.PWP_WC[i]): 
+        if i not in pSoilHorizons.PWP_WC or pSoilHorizons.PWP_WC[i] <= 0 or pd.isna(pSoilHorizons.PWP_WC[i]) or bNotUseFC_PWP_Sat_WC: 
             pSoilHorizons.PWP_WC[i] = WC(pSoilHorizons.Sat_WC[i], pSoilHorizons.PWP_WP[i], pSoilHorizons.AE_Pot[i], pSoilHorizons.B_Val[i])
-        pSoilHorizons.Number_Of_Sublayers[i] = int(pSoilHorizons.Horizon_Thickness[i] / Thickness_Model_Layers + 0.5)
+        pSoilHorizons.Number_Of_Sublayers[i] = round(pSoilHorizons.Horizon_Thickness[i] / Thickness_Model_Layers)
         
         #print(f'{i} FC_WP:{pSoilHorizons.FC_WP[i]} Bulk_Dens:{pSoilHorizons.Bulk_Dens[i]} FC_WC:{pSoilHorizons.FC_WC[i]} PWP_WC:{pSoilHorizons.PWP_WC[i]}')
     #'Distribute properties for each model layer of thickness 0.1 m
