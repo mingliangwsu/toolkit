@@ -154,7 +154,7 @@ def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen,bNotUseFC_PWP_Sat
         else:
             pSoilHorizen.Soil_Organic_Carbon[i] = float(df_SSURGO.loc[i-1, 'om_r'])
             pSoilHorizen.Percent_Soil_Organic_Matter[i] = pSoilHorizen.Soil_Organic_Carbon[i]
-        if is_blank(df_SSURGO.loc[i-1, 'dbthirdbar_r']):
+        if is_blank(df_SSURGO.loc[i-1, 'dbthirdbar_r']) or bNotUseFC_PWP_Sat_WC:
             pSoilHorizen.Bulk_Dens[i] = -9999.0
         else:
             pSoilHorizen.Bulk_Dens[i] = float(df_SSURGO.loc[i-1, 'dbthirdbar_r'])
@@ -590,7 +590,7 @@ SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
 
 #user option
 soil_propertities_from_SSURGO = False
-bNotUseFC_PWP_Sat_WC = False                                                    #06042025LML If use SSURGO data sets, use model to estimate FC, PWP, and Sat WC
+bNotUseFC_PWP_Sat_WC = False                                                    #06042025LML If use SSURGO data sets, use model to estimate FC, PWP,  Sat WC, and bulkdensity
 
 crop_growth_parameter_from_ISM = False
 weather_from_AgWeatherNet = False

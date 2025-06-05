@@ -336,10 +336,10 @@ def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer,bNotUseFC_
         Silt = pSoilHorizons.Silt[i]
         pSoilHorizons.AE_Pot[i] = AE(Sand, Clay)
         pSoilHorizons.B_Val[i] = B(Sand, Clay)
-        if i not in pSoilHorizons.FC_WP or pSoilHorizons.FC_WP[i] <= 0 or pd.isna(pSoilHorizons.FC_WP[i]):
+        if i not in pSoilHorizons.FC_WP or pSoilHorizons.FC_WP[i] <= 0 or pd.isna(pSoilHorizons.FC_WP[i]) or bNotUseFC_PWP_Sat_WC:
             pSoilHorizons.FC_WP[i] = WPFC(Clay, Silt)
         pSoilHorizons.PWP_WP[i] = -1500
-        if i not in pSoilHorizons.Bulk_Dens or pSoilHorizons.Bulk_Dens[i] <= 0 or pd.isna(pSoilHorizons.Bulk_Dens[i]):
+        if i not in pSoilHorizons.Bulk_Dens or pSoilHorizons.Bulk_Dens[i] <= 0 or pd.isna(pSoilHorizons.Bulk_Dens[i]) or bNotUseFC_PWP_Sat_WC:
             pSoilHorizons.Bulk_Dens[i] = BD(Sand, Clay)
         if i not in pSoilHorizons.Sat_WC or pSoilHorizons.Sat_WC[i] <= 0 or pd.isna(pSoilHorizons.Sat_WC[i]) or bNotUseFC_PWP_Sat_WC:
             pSoilHorizons.Sat_WC[i] = WS(Sand, Clay)
