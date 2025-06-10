@@ -102,6 +102,17 @@ def ReadCropParameters(Cells,Crop,col_letter):
     Crop.Critical_N_Concentration_Maturity = float(get_excel_value(Cells,f'{col_letter}29'))
     Crop.Minimum_N_Concentration_Maturity = float(get_excel_value(Cells,f'{col_letter}30'))
     #Crop.Potential_N_Uptake = float(get_excel_value(Cells,f'{col_letter}31'))
+    
+def is_number(s):
+    try:
+        t = float(s)
+        if math.isnan(t): 
+            return False
+        else:
+            return True
+    except ValueError:
+        return False
+    
 def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
     #'Soil description
     pSoilHorizen.Number_Of_Horizons = int(get_excel_value(Cells,'A17'))
@@ -112,8 +123,18 @@ def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
         pSoilHorizen.Clay[i] = float(Cells.iloc[22 + i - 1, 4 - 1])
         pSoilHorizen.Silt[i] = float(Cells.iloc[22 + i - 1, 5 - 1])
         pSoilHorizen.Sand[i] = float(Cells.iloc[22 + i - 1, 6 - 1])
-        pSoilHorizen.FC_WC[i] = float(Cells.iloc[22 + i - 1, 7 - 1])
-        pSoilHorizen.PWP_WC[i] = float(Cells.iloc[22 + i - 1, 8 - 1])
+        sFC = Cells.iloc[22 + i - 1, 7 - 1]
+        sPWP = Cells.iloc[22 + i - 1, 8 - 1]
+        if is_number(sFC):
+            pSoilHorizen.FC_WC[i] = float(sFC)
+        else:
+            pSoilHorizen.FC_WC[i] = -9999.
+        if is_number(sPWP):
+            pSoilHorizen.PWP_WC[i] = float(sPWP)
+        else:
+            pSoilHorizen.PWP_WC[i] = -9999.
+            
+        print(f'{i}:FC_WC: {pSoilHorizen.FC_WC[i]}')
         #pSoilHorizen.Soil_Organic_Carbon[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
         pSoilHorizen.Percent_Soil_Organic_Matter[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
         
@@ -573,7 +594,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_06032025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_06042025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -590,7 +611,7 @@ SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
 
 #user option
 soil_propertities_from_SSURGO = False
-bNotUseFC_PWP_Sat_WC = False                                                    #06042025LML If use SSURGO data sets, use model to estimate FC, PWP,  Sat WC, and bulkdensity
+bNotUseFC_PWP_Sat_WC = True                                                    #06042025LML If True, use model to estimate FC, PWP,  Sat WC, and bulkdensity; Otherwise, use user inputs or from soil database
 
 crop_growth_parameter_from_ISM = False
 weather_from_AgWeatherNet = False
