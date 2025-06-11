@@ -134,7 +134,6 @@ def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
         else:
             pSoilHorizen.PWP_WC[i] = -9999.
             
-        print(f'{i}:FC_WC: {pSoilHorizen.FC_WC[i]}')
         #pSoilHorizen.Soil_Organic_Carbon[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
         pSoilHorizen.Percent_Soil_Organic_Matter[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
         
@@ -594,7 +593,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_06042025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_06052025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'

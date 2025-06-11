@@ -569,8 +569,8 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
        pSoilFlux.Cumulative_Fertilization += Nitrate_N_Fertilization + Ammonium_N_Fertilization
        pSoilFlux.N_Leaching_Accumulated[DOY] = pSoilFlux.N_Leaching_Accumulated[Adj_DOY] + Cumulative_Pulse_N_Leaching * 10000 #'Convert kg/m2 to kg/ha     'Mingliang 4/23/2025
     
-    pSoilFlux.Simulation_Total_Deep_Drainage += Drainage #'mm
-    pSoilFlux.Simulation_Total_N_Leaching += Chemical_Leaching * 10000 #'Convert kg/m2 to kg/ha
+    pSoilFlux.Simulation_Total_Deep_Drainage += Cumulative_Pulse_Deep_Drainage #'mm 06112025LML updated
+    pSoilFlux.Simulation_Total_N_Leaching += Cumulative_Pulse_N_Leaching * 10000 #'Convert kg/m2 to kg/ha 06112025LML updated
     pSoilFlux.Simulation_Total_Irrigation += NID
     pSoilFlux.Simulation_Total_Fertilization += Nitrate_N_Fertilization + Ammonium_N_Fertilization
     
