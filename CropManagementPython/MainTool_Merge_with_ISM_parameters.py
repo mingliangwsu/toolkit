@@ -118,7 +118,7 @@ def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
     pSoilHorizen.Number_Of_Horizons = int(get_excel_value(Cells,'A17'))
     total_horizon_depth = 0  #05192025LML
     for i in range(1, pSoilHorizen.Number_Of_Horizons+1):
-        pSoilHorizen.Horizon_Thickness[i] = float(Cells.iloc[22 + i - 1, 3 - 1]) #round(float(Cells.iloc[22 + i - 1, 3 - 1]),1) #'Thickness is rounded to one decimal
+        pSoilHorizen.Horizon_Thickness[i] = round(float(Cells.iloc[22 + i - 1, 3 - 1]),1) #round(float(Cells.iloc[22 + i - 1, 3 - 1]),1) #'Thickness is rounded to one decimal
         total_horizon_depth += pSoilHorizen.Horizon_Thickness[i]
         pSoilHorizen.Clay[i] = float(Cells.iloc[22 + i - 1, 4 - 1])
         pSoilHorizen.Silt[i] = float(Cells.iloc[22 + i - 1, 5 - 1])
@@ -349,7 +349,7 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
         thickness = float(Cells.iloc[i + 6 - 1, 2 - 1])
         if not pd.isna(thickness) and thickness > 0:
             valid_Number_Initial_Conditions_Layers += 1
-            Thickness[i] = float(Cells.iloc[i + 6 - 1, 2 - 1])
+            Thickness[i] = round(float(Cells.iloc[i + 6 - 1, 2 - 1]),1)
             Number_Of_Sublayers[i] = round(Thickness[i] / Thickness_Model_Layers)
             #print(f'i:{i} Number_Of_Sublayers:{Number_Of_Sublayers[i]}')
             Water[i] = float(Cells.iloc[i + 6 - 1, 3 - 1])
