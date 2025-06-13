@@ -570,6 +570,17 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
                                           Available_For_Active_Uptake):
 #Items from "7-day daily budget table" of Irrigation Schedular, plus nitrogen 
 #budget
+    #06122025LML consistent with crop output
+    preday_Cumulative_N_Uptake = 0
+    #handle first day issue
+    if DOY == 1: 
+        if 366 in pCropState.Cumulative_N_Uptake and pCropState.Cumulative_N_Uptake[366] > 1e-12:
+            preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[366]
+        else:
+            preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[365]
+    else:
+        preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[DOY - 1]
+
     BudgetOutRow = dict()
     BudgetOutRow["DAE"] = DAE
     BudgetOutRow["DOY"] = DOY
@@ -580,12 +591,12 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
     BudgetOutRow["PAW Depletion (0-1)"] = pSoilState.PAW_Depletion[DOY]   #"Water Deficit (in)": "float64", 
     BudgetOutRow["Irrigation_Recommendation (in)"] = mm_to_inch(Irrigation_Recommendation)
     BudgetOutRow["Water_Stress_Index (0-1)"] = pETState.Water_Stress_Index[DOY]
-    BudgetOutRow["Today_Crop_N_Demand (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(Today_Crop_N_Demand)
-    BudgetOutRow["N Uptake (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(pCropState.N_Uptake[DOY])
+    #BudgetOutRow["Today_Crop_N_Demand (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(Today_Crop_N_Demand)
+    BudgetOutRow["N Uptake Rate (kg/ha/day)"] = (pCropState.Cumulative_N_Uptake[DOY] - preday_Cumulative_N_Uptake) * 10000 #'Convert kg/m2 to kg/ha #06122025LML KgPerSquareMeter_to_KgPerHa(pCropState.N_Uptake[DOY])
     BudgetOutRow["N Fertilization (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(pCS_Fertilization.Nitrate_Fertilization_Rate[DOY] 
                                                                           + pCS_Fertilization.Ammonium_Fertilization_Rate[DOY])
     BudgetOutRow["N Aailable (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(Available_For_Active_Uptake)
-    BudgetOutRow["N Deficit (kg/ha)"] = max(0.0,BudgetOutRow["Today_Crop_N_Demand (kg/ha)"] - BudgetOutRow["N Uptake (kg/ha)"])
+    #BudgetOutRow["N Deficit (kg/ha)"] = max(0.0,BudgetOutRow["Today_Crop_N_Demand (kg/ha)"] - BudgetOutRow["N Uptake (kg/ha)"])
     BudgetOutRow["Nitrogen_Stress_Index (0-1)"] = pCropState.Nitrogen_Stress_Index[DOY]
     DailyBudgetOutputs[Crop_Number].loc[len(DailyBudgetOutputs[Crop_Number])] = BudgetOutRow
     
@@ -850,11 +861,11 @@ DailyBudgetColums = {
     "PAW Depletion (0-1)": "float64", 
     "Irrigation_Recommendation (in)": "float64", 
     "Water_Stress_Index (0-1)": "float64", 
-    "Today_Crop_N_Demand (kg/ha)": "float64",
-    "N Uptake (kg/ha)": "float64", 
+     #"Today_Crop_N_Demand (kg/ha)": "float64",
+    "N Uptake Rate (kg/ha/day)": "float64", 
     "N Fertilization (kg/ha)": "float64",
     "N Aailable (kg/ha)": "float64",
-    "N Deficit (kg/ha)": "float64",
+     #"N Deficit (kg/ha)": "float64",
     "Nitrogen_Stress_Index (0-1)": "float64"
     }
 
