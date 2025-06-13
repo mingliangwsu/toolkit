@@ -369,7 +369,7 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
             pSoilModelLayer.Layer_Thickness[j] = Thickness[i] / Number_Of_Sublayers[i]
             if j <= pSoilModelLayer.Number_Model_Layers:
                 pSoilState.Water_Content[DOY][j] = min(pSoilModelLayer.FC_Water_Content[j], Water[i])
-                
+                pSoilState.Water_Content[DOY][j] = max(pSoilModelLayer.PWP_Water_Content[j], pSoilState.Water_Content[DOY][j]) #06132025LML incase user set zero
                 pSoilState.Water_Filled_Porosity[DOY][j] = Water[i] / pSoilModelLayer.Saturation_Water_Content[i]
                 #pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
                 pSoilState.Soil_Water_Potential[DOY][j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
