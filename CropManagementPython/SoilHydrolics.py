@@ -313,7 +313,7 @@ def WC(WS, WP, AE, B):
     return WC
 def WP(WS, WC, AE, B):
     #'Calculate water potential from water content
-    if abs(WC) <= 1e-12: #06122025LML in case WC is close to zero
+    if abs(WC) >= 1e-12: #06122025LML in case WC is close to zero
         WP = AE * math.pow((WC / WS), (-B))
     else:
         WP = -1.e6  #06122025LML set a big negative number
