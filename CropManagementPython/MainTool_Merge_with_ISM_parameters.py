@@ -359,6 +359,18 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     #print(f'valid_Number_Initial_Conditions_Layers: {valid_Number_Initial_Conditions_Layers} Number_Initial_Conditions_Layers:{Number_Initial_Conditions_Layers}')
           
     Number_Initial_Conditions_Layers = valid_Number_Initial_Conditions_Layers  #06042025LML
+    #06172025LML overall initialization by default
+    if Number_Initial_Conditions_Layers == 0:
+        Number_Initial_Conditions_Layers = 5
+        for i in range(1, Number_Initial_Conditions_Layers + 1):
+            Thickness[i] = 0.2
+            Number_Of_Sublayers[i] = round(Thickness[i] / Thickness_Model_Layers)
+            Water[i] = -9999.
+            Nitrate[i] = -9999.
+            Ammonium[i] = -9999.
+            
+    #print(f'adjusted valid_Number_Initial_Conditions_Layers: {valid_Number_Initial_Conditions_Layers} Number_Initial_Conditions_Layers:{Number_Initial_Conditions_Layers}')
+
     #'Distribute variables for each model layer of thickness 0.1 m
     Cum_J = 1
     for i in range(1, Number_Initial_Conditions_Layers + 1):
@@ -368,19 +380,33 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
         for j in range(k, L + 1):
             pSoilModelLayer.Layer_Thickness[j] = Thickness[i] / Number_Of_Sublayers[i]
             if j <= pSoilModelLayer.Number_Model_Layers:
-                pSoilState.Water_Content[DOY][j] = min(pSoilModelLayer.FC_Water_Content[j], Water[i])
-                pSoilState.Water_Content[DOY][j] = max(pSoilModelLayer.PWP_Water_Content[j], pSoilState.Water_Content[DOY][j]) #06132025LML incase user set zero
-                pSoilState.Water_Filled_Porosity[DOY][j] = Water[i] / pSoilModelLayer.Saturation_Water_Content[i]
-                #pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
-                pSoilState.Soil_Water_Potential[DOY][j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
-                if NUnit == 'kgN_ha':
-                    pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / 10000. / Number_Of_Sublayers[i]    #'Convert kg/ha to kg/m2
-                    pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] / 10000. / Number_Of_Sublayers[i]  #'Convert kg/ha to kg/m2
-                elif NUnit == 'ppm':
-                    pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] * pSoilModelLayer.Bulk_Density[j] * pSoilModelLayer.Layer_Thickness[j] / 1000    #'Convert ppm to kg/m2
-                    pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] * pSoilModelLayer.Bulk_Density[j] * pSoilModelLayer.Layer_Thickness[j] / 1000. #'Convert ppm to kg/m2
+                if Water[i] >= 0 and not pd.isna(Water[i]):
+                    pSoilState.Water_Content[DOY][j] = min(pSoilModelLayer.FC_Water_Content[j], Water[i])
+                    pSoilState.Water_Content[DOY][j] = max(pSoilModelLayer.PWP_Water_Content[j], pSoilState.Water_Content[DOY][j]) #06132025LML incase user set zero
+                else:
+                    pSoilState.Water_Content[DOY][j] = pSoilModelLayer.FC_Water_Content[j] * 0.7 + pSoilModelLayer.PWP_Water_Content[j] * 0.3   #'Mingliang 6/17/2025
                     
-                #print(f'Num_layers: {pSoilModelLayer.Number_Model_Layers} NUnit:{NUnit} i:{i} j:{j} Bulk_Density:{pSoilModelLayer.Bulk_Density[j]} Nitrate_N_Content:{pSoilState.Nitrate_N_Content[DOY][j]} Ammonium:{pSoilState.Ammonium_N_Content[DOY][j]}')
+                pSoilState.Water_Filled_Porosity[DOY][j] = pSoilState.Water_Content[DOY][j] / pSoilModelLayer.Saturation_Water_Content[i]
+                #pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
+                pSoilState.Soil_Water_Potential[DOY][j] = WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][j], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
+                
+                if Nitrate[i] >= 0 and not pd.isna(Nitrate[i]):
+                    if NUnit == 'kgN_ha':
+                        pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / 10000. / Number_Of_Sublayers[i]    #'Convert kg/ha to kg/m2
+                    elif NUnit == 'ppm':
+                        pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] * pSoilModelLayer.Bulk_Density[j] * pSoilModelLayer.Layer_Thickness[j] / 1000    #'Convert ppm to kg/m2
+                else:
+                    pSoilState.Nitrate_N_Content[DOY][j] = 10 / 10000   #'Convert kg/ha to kg/m2         'Mingliang 6/17/2025
+                    
+                if Ammonium[i] >= 0 and not pd.isna(Ammonium[i]):
+                    if NUnit == 'kgN_ha':
+                        pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] / 10000. / Number_Of_Sublayers[i]  #'Convert kg/ha to kg/m2
+                    elif NUnit == 'ppm':
+                        pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] * pSoilModelLayer.Bulk_Density[j] * pSoilModelLayer.Layer_Thickness[j] / 1000. #'Convert ppm to kg/m2
+                else:
+                    pSoilState.Ammonium_N_Content[DOY][j] = 0 #'Convert kg/ha to kg/m2                  'Mingliang 6/17/2025
+                    
+                #print(f'Num_layers: {pSoilModelLayer.Number_Model_Layers} NUnit:{NUnit} i:{i} j:{j} Bulk_Density:{pSoilModelLayer.Bulk_Density[j]} WC:{pSoilState.Water_Content[DOY][j]} Nitrate_N_Content:{pSoilState.Nitrate_N_Content[DOY][j]} Ammonium:{pSoilState.Ammonium_N_Content[DOY][j]}')
                 pSoilModelLayer.Soil_Mass[j] = pSoilModelLayer.Bulk_Density[j] * 1000 * pSoilModelLayer.Layer_Thickness[j] #'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
                 SOC = pSoilModelLayer.Soil_Mass[j] * (pSoilModelLayer.Percent_Soil_Organic_Matter[j] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
                 pSoilState.Soil_Organic_Carbon[DOY][j] = SOC
