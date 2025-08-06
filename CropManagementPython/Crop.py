@@ -14,7 +14,7 @@ def InitializeCrop_OBSOLETE(DOY,pCropState, pCropParameter, pETState):
     Depth_Of_Seed = pCropParameter.Seeding_Depth
     Root_Depth_At_Emergence = Depth_Of_Seed + pCropParameter.Initial_Root_Depth_From_Germinated_Seed
     pCropState.Root_Depth[DOY] = Root_Depth_At_Emergence
-    pCropState.Cumulative_Crop_Biomass[DOY-1] = 0.002
+    pCropState.Cumulative_Crop_Biomass[DOY-1] = 0 #'0.002    'OJO IMPROVE ON THIS
     pCropState.Seasonal_Biomass = pCropState.Cumulative_Crop_Biomass[DOY-1]
     pETState.Water_Stress_Index[DOY] = 0
     pETState.Cumulative_Potential_Crop_Biomass[DOY - 1] = pCropState.Cumulative_Crop_Biomass[DOY-1]
@@ -59,7 +59,7 @@ def Biomass(DOY, Potential_Crop, pCropState, pCropParameter, pCS_Weather, pETSta
             pCropState.Cumulative_Crop_Biomass[DOY] = pCropState.Cumulative_Crop_Biomass[DOY - 1] + Actual_Crop_Biomass_Gain
         pCropState.Seasonal_Biomass += Actual_Crop_Biomass_Gain
 
-def ReferencePlantNConcentration(DOY, pCropState, pCropParameter, pCropGrowth):
+def ReferencePlantNConcentration(DOY, pCropState, pCropParameter, pCropGrowth, Begin_Crop_Senescence):
     #'Read input parameters
     N_Critical_Concentration_At_Emergence = pCropParameter.Critical_N_Concentration_Emergence
     N_Maximum_Concentration_At_Emergence = pCropParameter.Maximum_N_Concentration_Emergence
@@ -72,20 +72,22 @@ def ReferencePlantNConcentration(DOY, pCropState, pCropParameter, pCropGrowth):
     Critical_N_Concentration_At_Maturity = pCropParameter.Critical_N_Concentration_Maturity
     Minimum_N_Concentration_At_Maturity = pCropParameter.Minimum_N_Concentration_Maturity
     DOY_Begin_Decline = pCropGrowth.Beging_Senescence_DOY
+    Days_Elapsed = 0
     #'Start processing
     Amax = N_Maximum_Concentration_At_Emergence / math.pow(Biomass_To_Start_Dilution_Maximum_N_Concentration, Slope)
     Acrit = N_Critical_Concentration_At_Emergence / math.pow(Biomass_To_Start_Dilution_Critical_N_Concentration, Slope)
     Amin = N_Minimum_Concentration_At_Emergence / math.pow(Biomass_To_Start_Dilution_Minimum_N_Concentration, Slope)
     DOY_Season_End = pCropGrowth.Maturity_DOY
     Cumulative_Top_Biomass = pCropState.Cumulative_Potential_Crop_Biomass[DOY] * 10  #'Convert kg/m2 to Mg/ha
-    Begin_Crop_Senescence = False
+    #Begin_Crop_Senescence = False
+    #global Begin_Crop_Senescence
     if not Begin_Crop_Senescence:   #DOY <= DOY_Begin_Decline and Cumulative_Top_Biomass > 0:
         tBiomass = math.pow(Cumulative_Top_Biomass, Slope)
         pCropState.Maximum_N_Concentration[DOY] = min(N_Maximum_Concentration_At_Emergence, Amax * tBiomass)
         pCropState.Critical_N_Concentration[DOY] = min(N_Critical_Concentration_At_Emergence, Acrit * tBiomass)
         pCropState.Minimum_N_Concentration[DOY] = min(N_Minimum_Concentration_At_Emergence, Amin * tBiomass)
         if DOY == DOY_Begin_Decline:
-            Begin_Crop_Senescence = True
+            Begin_Crop_Senescence = True  #'Mingliang 6/21/2025
             pCropState.Maximum_Green_Canopy_Cover_Reached = True
             pCropState.DOY_Of_Transition = DOY
             
@@ -106,6 +108,8 @@ def ReferencePlantNConcentration(DOY, pCropState, pCropParameter, pCropGrowth):
         pCropState.Maximum_N_Concentration[DOY] = pCropState.Maximum_N_Concentration_At_Transition - pCropState.Daily_Change_Maximum_N_Concentration * (DOY - pCropState.DOY_Of_Transition)
         pCropState.Critical_N_Concentration[DOY] = pCropState.Critical_N_Concentration_At_Transition - pCropState.Daily_Change_Critical_N_Concentration * (DOY - pCropState.DOY_Of_Transition)
         pCropState.Minimum_N_Concentration[DOY] = pCropState.Minimum_N_Concentration_At_Transition - pCropState.Daily_Change_Minimum_N_Concentration * (DOY - pCropState.DOY_Of_Transition)
+        
+    return Begin_Crop_Senescence
 
 def CanopyCover_OBSOLETE(DOY, pCropState, pCropParameter, pCropGrowth, pETState):
     DOY_Begin_Decline = pCropGrowth.Beging_Senescence_DOY
@@ -175,6 +179,10 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
     Active_N_Uptake = dict() #(20) As Double
     Layer_Active_NH4_N_Uptake = dict() #(20) As Double
     Layer_Active_NO3_N_Uptake = dict() #(20) As Double
+    
+    Maximum_Active_N_Uptake = dict() #(20) As Double
+    Relative_Active_Uptake = dict() #(20) As Double
+    
     Available_N = 0.0
 
     
@@ -189,82 +197,98 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
     #COS LML 02252025 Surplus = max(0, Crop_N - Today_Plant_N_Max * Cumulative_Top_Biomass)
     #COS LML 02252025 Today_Crop_N_Demand = max(0, Cumulative_Top_Biomass * Today_Plant_N_Max - Crop_N - Surplus) #'Convert biomass from Mg/ha to kg/m2
     Today_Crop_N_Demand = max(0, Cumulative_Top_Biomass * Today_Plant_N_Max - Crop_N) #'Convert biomass from Mg/ha to kg/m2
-    
-    #'Calculate daily potential PASSIVE crop N uptake
-    Total_Potential_Passive_N_Uptake = 0.
-    Total_Water_Uptake = 0.
-    Number_Of_Layers = pSoilModelLayer.Number_Model_Layers
-    for Layer in range(2, Number_Of_Layers + 1):
-        Water_Uptake[Layer] = pETState.Soil_Water_Uptake[DOY][Layer]
-        if Water_Uptake[Layer] > 0: Total_Water_Uptake += Water_Uptake[Layer]
-        Soil_NO3_Mass[Layer] = pSoilState.Nitrate_N_Content[DOY][Layer]
-        Soil_NH4_Mass[Layer] = pSoilState.Ammonium_N_Content[DOY][Layer]
-        Available_N += Soil_NO3_Mass[Layer] + Soil_NH4_Mass[Layer]
-        Water_Content = pSoilState.Water_Content[DOY][Layer]
-        Layer_Thickness = pSoilModelLayer.Layer_Thickness[Layer]
-        Soil_Solution_N_Conc[Layer] = Soil_NO3_Mass[Layer] / (Water_Content * Water_Density * Layer_Thickness) #'kg/kg   Only nitrate considered for passive uptake
-        if Water_Uptake[Layer] > 0:
-            Potential_Passive_N_Uptake[Layer] = Water_Uptake[Layer] * Soil_Solution_N_Conc[Layer]  #'kg/m2
-        else:
-            Potential_Passive_N_Uptake[Layer] = 0
-
-        if Potential_Passive_N_Uptake[Layer] > Soil_NO3_Mass[Layer]: Potential_Passive_N_Uptake[Layer] = Soil_NO3_Mass[Layer]
-        Total_Potential_Passive_N_Uptake += Potential_Passive_N_Uptake[Layer]
-
-    Today_Expected_Passive_N_Uptake = min(Today_Crop_N_Demand, Total_Potential_Passive_N_Uptake)
-    #'Determine actual passive NO3-N uptake and update soil nitrate mass
-    Total_Actual_Passive_N_Upt = 0.
-    for Layer in range(2, Number_Of_Layers + 1):
-        Actual_Passive_N_Uptake[Layer] = 0.
-        if Total_Potential_Passive_N_Uptake > 0:
-            Actual_Passive_N_Uptake[Layer] = Potential_Passive_N_Uptake[Layer] * Today_Expected_Passive_N_Uptake / Total_Potential_Passive_N_Uptake
-
-        Total_Actual_Passive_N_Upt += Actual_Passive_N_Uptake[Layer]
-        Soil_NO3_Mass[Layer] -= Actual_Passive_N_Uptake[Layer]
-
-    Passive_Uptake_Deficit = max(0, Today_Crop_N_Demand - Total_Actual_Passive_N_Upt)
-    for Layer in range(2, Number_Of_Layers + 1):
-        if Passive_Uptake_Deficit > 0 and Total_Actual_Passive_N_Upt > 0: #'Calculate daily potential ACTIVE uptake by layer
-                Maximum_Active_N_Uptake = Passive_Uptake_Deficit * Actual_Passive_N_Uptake[Layer] / Total_Actual_Passive_N_Upt
-        else:
-            if Water_Uptake[Layer] > 0:
-                Maximum_Active_N_Uptake = Passive_Uptake_Deficit * Water_Uptake[Layer] / Total_Water_Uptake
-            else:
-                Maximum_Active_N_Uptake = 0.
-        Soil_Solution_N_Conc[Layer] = (Soil_NO3_Mass[Layer] + Soil_NH4_Mass[Layer]) / (Water_Content * Water_Density * Layer_Thickness) #'kg/kg   [NO3] + [NH4] added for active uptake
-        
-        #'Hard-Coded Parameters for Michaelis-Menten for relative active uptake (0 to 1) based on the soil solution N concentration
-        Min_Conc_For_Active_Uptake = 0.00005
-        Km = 0.00005
-        if Soil_Solution_N_Conc[Layer] < Min_Conc_For_Active_Uptake:
-            Relative_Active_Uptake = 0
-        else:
-            Relative_Active_Uptake = max(0, (Soil_Solution_N_Conc[Layer] - Min_Conc_For_Active_Uptake) / (Km + Soil_Solution_N_Conc[Layer] - Min_Conc_For_Active_Uptake))
-
-        Active_N_Uptake[Layer] = Maximum_Active_N_Uptake * Relative_Active_Uptake
-        Available_For_Active_Uptake = Soil_NO3_Mass[Layer] + Soil_NH4_Mass[Layer]
-        if Active_N_Uptake[Layer] > Available_For_Active_Uptake: Active_N_Uptake[Layer] = Available_For_Active_Uptake
-        #'Update Soil N
-        Layer_Active_NH4_N_Uptake[Layer] = min(Active_N_Uptake[Layer], Soil_NH4_Mass[Layer])
-        Layer_Active_NO3_N_Uptake[Layer] = max(0.,Active_N_Uptake[Layer] - Layer_Active_NH4_N_Uptake[Layer])
-
+    Today_Crop_N_Demand = min(pCropParameter.Maximum_Daily_N_Uptake_Rate, Today_Crop_N_Demand) #'Mingliang 7/19/2025 CROP PARAMETER WAS ADDED
     
     Today_N_Uptake = 0.
     Today_NO3_N_Uptake = 0.
     Today_NH4_N_Uptake = 0.
-    for Layer in range(2, Number_Of_Layers + 1):
-        pSoilState.Ammonium_N_Content[DOY][Layer] -= Layer_Active_NH4_N_Uptake[Layer]
-        pSoilState.Nitrate_N_Content[DOY][Layer] -= Layer_Active_NO3_N_Uptake[Layer] + Actual_Passive_N_Uptake[Layer]
-        Today_NO3_N_Uptake += Layer_Active_NO3_N_Uptake[Layer] + Actual_Passive_N_Uptake[Layer]
-        Today_NH4_N_Uptake += Layer_Active_NH4_N_Uptake[Layer]
-        Today_N_Uptake += Actual_Passive_N_Uptake[Layer] + Layer_Active_NH4_N_Uptake[Layer] + Layer_Active_NO3_N_Uptake[Layer]
+    
+    if Today_Crop_N_Demand > 0: #'Mingliang 7/20/2025
+        #'Calculate daily potential PASSIVE crop N uptake
+        Total_Potential_Passive_N_Uptake = 0.
+        Total_Water_Uptake = 0.
+        Number_Of_Layers = pSoilModelLayer.Number_Model_Layers
+        for Layer in range(2, Number_Of_Layers + 1):
+            Water_Uptake[Layer] = pETState.Soil_Water_Uptake[DOY][Layer]
+            if Water_Uptake[Layer] > 0: Total_Water_Uptake += Water_Uptake[Layer]
+            Soil_NO3_Mass[Layer] = pSoilState.Nitrate_N_Content[DOY][Layer]
+            Soil_NH4_Mass[Layer] = pSoilState.Ammonium_N_Content[DOY][Layer]
+            Available_N += Soil_NO3_Mass[Layer] + Soil_NH4_Mass[Layer]
+            Water_Content = pSoilState.Water_Content[DOY][Layer]
+            Layer_Thickness = pSoilModelLayer.Layer_Thickness[Layer]
+            Soil_Solution_N_Conc[Layer] = Soil_NO3_Mass[Layer] / (Water_Content * Water_Density * Layer_Thickness) #'kg/kg   Only nitrate considered for passive uptake
+            if Water_Uptake[Layer] > 0:
+                Potential_Passive_N_Uptake[Layer] = Water_Uptake[Layer] * Soil_Solution_N_Conc[Layer]  #'kg/m2
+            else:
+                Potential_Passive_N_Uptake[Layer] = 0
+    
+            if Potential_Passive_N_Uptake[Layer] > Soil_NO3_Mass[Layer]: Potential_Passive_N_Uptake[Layer] = Soil_NO3_Mass[Layer]
+            Total_Potential_Passive_N_Uptake += Potential_Passive_N_Uptake[Layer]
+    
+        Today_Expected_Passive_N_Uptake = min(Today_Crop_N_Demand, Total_Potential_Passive_N_Uptake)
+        #'Determine actual passive NO3-N uptake and update soil nitrate mass
+        Total_Actual_Passive_N_Upt = 0.
+        for Layer in range(2, Number_Of_Layers + 1):
+            Actual_Passive_N_Uptake[Layer] = 0.
+            if Total_Potential_Passive_N_Uptake > 0:
+                Actual_Passive_N_Uptake[Layer] = Potential_Passive_N_Uptake[Layer] * Today_Expected_Passive_N_Uptake / Total_Potential_Passive_N_Uptake
+    
+            Total_Actual_Passive_N_Upt += Actual_Passive_N_Uptake[Layer]
+            Soil_NO3_Mass[Layer] -= Actual_Passive_N_Uptake[Layer]
+    
+        Passive_Uptake_Deficit = max(0, Today_Crop_N_Demand - Total_Actual_Passive_N_Upt)
+        for Layer in range(2, Number_Of_Layers + 1):
+            if Passive_Uptake_Deficit > 0 and Total_Actual_Passive_N_Upt > 0: #'Calculate daily potential ACTIVE uptake by layer
+                    Maximum_Active_N_Uptake[Layer] = Passive_Uptake_Deficit * Actual_Passive_N_Uptake[Layer] / Total_Actual_Passive_N_Upt
+            else:
+                if Water_Uptake[Layer] > 0:
+                    Maximum_Active_N_Uptake[Layer] = Passive_Uptake_Deficit * Water_Uptake[Layer] / Total_Water_Uptake
+                else:
+                    Maximum_Active_N_Uptake[Layer] = 0.
+            Soil_Solution_N_Conc[Layer] = (Soil_NO3_Mass[Layer] + Soil_NH4_Mass[Layer]) / (Water_Content * Water_Density * Layer_Thickness) #'kg/kg   [NO3] + [NH4] added for active uptake
+            
+            #'Hard-Coded Parameters for Michaelis-Menten for relative active uptake (0 to 1) based on the soil solution N concentration
+            Min_Conc_For_Active_Uptake = 0.00005
+            Km = 0.00005
+            if Soil_Solution_N_Conc[Layer] < Min_Conc_For_Active_Uptake:
+                Relative_Active_Uptake[Layer] = 0
+            else:
+                Relative_Active_Uptake[Layer] = max(0, (Soil_Solution_N_Conc[Layer] - Min_Conc_For_Active_Uptake) / (Km + Soil_Solution_N_Conc[Layer] - Min_Conc_For_Active_Uptake))
+    
+            Active_N_Uptake[Layer] = Maximum_Active_N_Uptake[Layer] * Relative_Active_Uptake[Layer]
+            Available_For_Active_Uptake = Soil_NO3_Mass[Layer] + Soil_NH4_Mass[Layer]
+            if Active_N_Uptake[Layer] > Available_For_Active_Uptake: Active_N_Uptake[Layer] = Available_For_Active_Uptake
+            #'Update Soil N
+            Layer_Active_NH4_N_Uptake[Layer] = min(Active_N_Uptake[Layer], Soil_NH4_Mass[Layer])
+            Layer_Active_NO3_N_Uptake[Layer] = max(0.,Active_N_Uptake[Layer] - Layer_Active_NH4_N_Uptake[Layer])
+    
+        for Layer in range(2, Number_Of_Layers + 1):
+            pSoilState.Ammonium_N_Content[DOY][Layer] -= Layer_Active_NH4_N_Uptake[Layer]
+            pSoilState.Nitrate_N_Content[DOY][Layer] -= Layer_Active_NO3_N_Uptake[Layer] + Actual_Passive_N_Uptake[Layer]
+            Today_NO3_N_Uptake += Layer_Active_NO3_N_Uptake[Layer] + Actual_Passive_N_Uptake[Layer]
+            Today_NH4_N_Uptake += Layer_Active_NH4_N_Uptake[Layer]
+            Today_N_Uptake += Actual_Passive_N_Uptake[Layer] + Layer_Active_NH4_N_Uptake[Layer] + Layer_Active_NO3_N_Uptake[Layer]
+    else: #'Mingliang 7/20/2025
+        Today_N_Uptake = 0.
         
     if DOY == 1:
         pCropState.Seasonal_N_Uptake = pCropState.Cumulative_N_Uptake[365] + Today_N_Uptake 
     else: 
         pCropState.Seasonal_N_Uptake = pCropState.Cumulative_N_Uptake[DOY - 1] + Today_N_Uptake
     Crop_N += Today_N_Uptake #'Crop N mass different to cumulative N uptake only if Crop N mass set at emergence or foliar applications considered
-    Crop_N_Conc = Crop_N / Cumulative_Top_Biomass
+    #Crop_N_Conc = Crop_N / Cumulative_Top_Biomass #Mingliang 7/20/2025
+    
+    #'Mingliang 7/20/2025
+    #'If N uptake is zero and the maximum N concentration is always decreasing, then there will be excess crop N that is lost as gas
+    if Today_N_Uptake == 0.:
+        Crop_N_Conc = Today_Plant_N_Max
+    else:
+        Crop_N_Conc = Crop_N / Cumulative_Top_Biomass
+    
+    if Crop_N_Conc < 0: raise Exception("Crop_N_Conc < 0")
+    if Crop_N_Conc > Today_Plant_N_Max: raise Exception("Crop_N_Conc > Today_Plant_N_Max")
+
+
     #'Update variables
     pCropState.Crop_N_Mass[DOY] = Crop_N
     pCropState.N_Uptake[DOY] = Today_N_Uptake
@@ -277,7 +301,82 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
     else:
         pCropState.Nitrogen_Stress_Index[DOY] = min(1, 1 - (pCropState.Crop_N_Concentration[DOY] - pCropState.Minimum_N_Concentration[DOY]) / (pCropState.Critical_N_Concentration[DOY] - pCropState.Minimum_N_Concentration[DOY]))
         
-    return Today_Crop_N_Demand,Available_N
+    return Today_Crop_N_Demand,Available_N, Today_N_Uptake
+
+def FertilizerRecommendation(DOY, pCropState, pCropParameter, 
+                             pCropGrowth, pETState, pSoilModelLayer, pSoilState, 
+                             Scheduled_Fertilization, pCS_Fertilization, 
+                             Potential_Biomass_At_Maturity, Auto_Fertilization):
+    N_Conc_That_Triggers_Fertilization = 0. 
+    Scheduling_Window_Days = 0
+    Next_Week_Scheduled_Fertilization = False
+    Readily_Available_Soil_N_Mass = 0.
+    Nitrate_N_Recommended = 0.
+    pre_doy = DOY - 1
+    if pre_doy == 0: pre_doy = 365
+    
+    #Dim Scheduled_Fertilization_Amount As Double
+    #Dim Pertinent_Soil_Depth As Double
+    #Dim Soil_Depth As Double
+    #Dim Readily_Available_Soil_N_Mass As Double
+    #Dim Layer As Integer
+    #Dim NL As Integer
+    #Dim i As Integer
+    #Dim Days_Counter As Integer
+    #Dim Begin_Senescence As Integer 'Mingliang 7/18/2025
+    
+    #'Mingliang 7/23/2025
+    #'Calculation of recommended fertilization, based on a plant N conc threshold that triggers fertilization
+    Begin_Senescence = pCropGrowth.Beging_Senescence_DOY
+    if DOY > Begin_Senescence: 
+        Scheduling_Window_Days = (365 - DOY) + Begin_Senescence
+    else: 
+        Scheduling_Window_Days = Begin_Senescence - DOY
+    #global Auto_Fertilization
+    if Auto_Fertilization and DOY < Begin_Senescence: #'Mingliang 7/18/2025 Added to enable or disable automatic fertilization.
+        Next_Week_Scheduled_Fertilization = False
+        Scheduled_Fertilization_Amount = 0
+        Days_Counter = 0
+        while Days_Counter <= Scheduling_Window_Days:
+            tdoy = DOY + Days_Counter
+            if tdoy > 365: tdoy -= 365
+            Scheduled_Fertilization_Amount += pCS_Fertilization.Nitrate_Fertilization_Rate[tdoy] \
+                        + pCS_Fertilization.Ammonium_Fertilization_Rate[tdoy]
+            if Days_Counter == 7 and Scheduled_Fertilization_Amount > 0: 
+                Next_Week_Scheduled_Fertilization = True
+                pCropState.Recommended_N_Fertilization = False
+            Days_Counter += 1
+
+        N_Conc_That_Triggers_Fertilization = pCropState.Maximum_N_Concentration[DOY] * 0.2 + pCropState.Critical_N_Concentration[DOY] * 0.8
+        if pCropState.Crop_N_Concentration[DOY] < N_Conc_That_Triggers_Fertilization and not Next_Week_Scheduled_Fertilization: 
+            #'Calculate current soil N mass to a soil depth equal to half maximum root depth (Best estimate of N mass available for future N uptake)
+            Pertinent_Soil_Depth = round(pCropParameter.Maximum_Root_Depth / 2., 1)
+            Soil_Depth = 0
+            Readily_Available_Soil_N_Mass = 0
+            NL = pSoilModelLayer.Number_Model_Layers
+            Soil_Depth = pSoilModelLayer.Layer_Thickness[1]
+            for Layer in range(2, NL + 1):     #'Root nutrient absorsion begins at layer 2
+                Soil_Depth += pSoilModelLayer.Layer_Thickness[Layer]
+                if Soil_Depth <= Pertinent_Soil_Depth:
+                    Readily_Available_Soil_N_Mass += pSoilState.Nitrate_N_Content[DOY][Layer] + pSoilState.Ammonium_N_Content[DOY][Layer]
+                else:
+                    break
+            #global Potential_Biomass_At_Maturity
+            Nitrate_N_Recommended = Potential_Biomass_At_Maturity * (pCropParameter.Maximum_N_Concentration_Maturity \
+                     + pCropParameter.Critical_N_Concentration_Maturity) / 2. - pCropState.Crop_N_Mass[pre_doy] - Scheduled_Fertilization_Amount \
+                     - Readily_Available_Soil_N_Mass
+            if Nitrate_N_Recommended > 0.001: #'This is to ensure that N recommendation is at least 10 kg/ha
+                pCropState.Recommended_N_Fertilization = True
+                pCropState.N_Fert_Recommended_DOY[DOY]= DOY
+                pCropState.N_Fert_Recommended_Amount[DOY] = Nitrate_N_Recommended
+            else:
+                pCropState.Recommended_N_Fertilization = False
+                pCropState.N_Fert_Recommended_Amount[DOY] = 0.
+        else:
+            pCropState.Recommended_N_Fertilization = False
+            pCropState.N_Fert_Recommended_Amount[DOY] = 0.
+    #'Mingliang 7/23/2025 End of fertilization recommendation
+    return pCropState.Recommended_N_Fertilization, pCropState.N_Fert_Recommended_Amount[DOY]
 
 def InitializeCrop(DOY,pCropState,pSoilFlux,pCropParameter,pETState):
     pCropState.Green_Canopy_Cover[DOY] = pCropParameter.Initial_Green_Canopy_Cover
@@ -285,7 +384,7 @@ def InitializeCrop(DOY,pCropState,pSoilFlux,pCropParameter,pETState):
     Depth_Of_Seed = pCropParameter.Seeding_Depth
     Root_Depth_At_Emergence = Depth_Of_Seed + pCropParameter.Initial_Root_Depth_From_Germinated_Seed
     pCropState.Root_Depth[DOY] = Root_Depth_At_Emergence
-    pCropState.Cumulative_Crop_Biomass[DOY - 1] = 0.002
+    pCropState.Cumulative_Crop_Biomass[DOY - 1] = 0. #0.002
     pCropState.Seasonal_Biomass = pCropState.Cumulative_Crop_Biomass[DOY - 1]
     pCropState.Cumulative_Potential_Crop_Biomass[DOY - 1] = pCropState.Cumulative_Crop_Biomass[DOY - 1]
     pCropState.Crop_N_Mass[DOY - 1] = pCropState.Cumulative_Crop_Biomass[DOY - 1] * pCropParameter.Maximum_N_Concentration_Emergence
@@ -299,6 +398,18 @@ def InitializeCrop(DOY,pCropState,pSoilFlux,pCropParameter,pETState):
     pCropState.Seasonal_N_Uptake = 0.
 
 def InitCropState(pCropState):
+    pCropState.Recommended_N_Fertilization = 0.0
+    pCropState.Recommended_N_Fertilization = False
+    
+    pCropState.Maximum_N_Concentration_At_Transition = 0
+    pCropState.Daily_Change_Maximum_N_Concentration = 0
+    pCropState.Maximum_Green_Canopy_Cover_Reached = False
+    pCropState.Critical_N_Concentration_At_Transition = 0
+    pCropState.Daily_Change_Critical_N_Concentration = 0
+    pCropState.Minimum_N_Concentration_At_Transition = 0
+    pCropState.Daily_Change_Minimum_N_Concentration = 0
+    pCropState.DOY_Of_Transition = 0
+    
     for i in range(1,367):
         pCropState.Potential_Green_Canopy_Cover[i] = 0.0
         pCropState.Green_Canopy_Cover[i] = 0.0
@@ -318,17 +429,13 @@ def InitCropState(pCropState):
         pCropState.Cumulative_N_Uptake[i] = 0.0
         pCropState.Crop_N_Concentration[i] = 0.0
         pCropState.Maximum_N_Concentration[i] = 0.0
-        pCropState.Maximum_N_Concentration_At_Transition = 0
-        pCropState.Daily_Change_Maximum_N_Concentration = 0
         pCropState.Critical_N_Concentration[i] = 0.0
-        pCropState.Critical_N_Concentration_At_Transition = 0
-        pCropState.Daily_Change_Critical_N_Concentration = 0
         pCropState.Minimum_N_Concentration[i] = 0.0
-        pCropState.Minimum_N_Concentration_At_Transition = 0
-        pCropState.Daily_Change_Minimum_N_Concentration = 0
-        pCropState.DOY_Of_Transition = 0
         pCropState.Nitrogen_Stress_Index[i] = 0.0
-        pCropState.Maximum_Green_Canopy_Cover_Reached = False
+        
+        pCropState.N_Fert_Recommended_DOY[i] = 0
+        pCropState.N_Fert_Recommended_Amount[i] = 0
+        
 
 
 def CC(B1, B2, Value_ini, Value_max, Asymthotic_Value_Decline, Value_end, 

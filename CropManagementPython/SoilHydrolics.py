@@ -134,6 +134,7 @@ class SoilFlux:
     Cumulative_Mineralization_Next_Three_Layers_All_Days = 0.0
     Cumulative_Mineralization_Top_Three_Layers_Crop = dict()
     Cumulative_Mineralization_Next_Three_Layers_Crop = dict()
+    Cumulative_Mineralization_All_Layers = 0.0    #'Mingliang 6/21/2025
     
     Cumulative_Deep_Drainage = 0.
     Cumulative_N_Leaching = 0.
@@ -145,6 +146,7 @@ class SoilFlux:
     Simulation_Total_Deep_Drainage = 0.
     Simulation_Total_Irrigation = 0.
     Simulation_Total_Fertilization = 0.
+    
 
 class ETState:
     Potential_Transpiration = dict()
@@ -247,6 +249,7 @@ def InitSoilFlux(pSoilFlux):
     
     pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_All_Days = 0.0
     pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_All_Days = 0.0
+    pSoilFlux.Cumulative_Mineralization_All_Layers = 0.0
     
     for i in range(1,3):
         pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop[i] = 0.
@@ -390,8 +393,10 @@ def EquilibriumConcentration(Chemical_Mass, WC, DZ, BD, K, Q):
     return (-B + math.sqrt(B * B - 4 * A * C)) / (2 * A)
 
 def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterNConc, 
-                       Prec, Nitrate_N_Fertilization, Ammonium_N_Fertilization, Nitrate_Fraction, 
-                       AutoIrrigations, pSoilFlux, CropActive, pETState, Water_Depth_To_Refill_fc):
+                       Prec, pCS_Fertilization, Nitrate_Fraction, 
+                       AutoIrrigations, pSoilFlux, CropActive, pETState, 
+                       Water_Depth_To_Refill_fc, Auto_Irrigation,
+                       Recommended_N_Fertilization, Nitrate_N_Recommended):
     #'This subroutine only transport nitrate N. Ammonium N only moves down the soil when transformed to nitrate
     Chem_Mass = dict()
     WC = dict()
@@ -422,6 +427,9 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
         Initial_Soil_Water_Profile = Initial_Soil_Water_Profile + WC[Layer] * dz[Layer] * WD
         Initial_Profile_Chemical_Mass = Initial_Profile_Chemical_Mass + Chem_Mass[Layer]
 
+    #Mingliang 7/20/2025
+    NID = net_irrigations[DOY] #'Moved outside auto irrigation if statement
+    if Auto_Irrigation:
         Number_Of_Events = AutoIrrigations.Number_Of_Auto_Entries
         for i in range(1, Number_Of_Events + 1):
             if AutoIrrigations.Events[i].DOY_To_Start_Auto_Irrigation == DOY:
@@ -442,9 +450,18 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
             if AutoIrrigations.Events[i].DOY_For_Refill_Irrigation == DOY:
                 pSoilState.Refill_Today = True
                 pSoilState.Soil_Depth_To_Refill = AutoIrrigations.Events[i].Refill_Depth
-
+    else: #'Mingliang 7/20/2025  Determine PAW depletion when auto irrigation is false
+        PAW_Depletion_Today = 0
+        for Layer in range(1, Number_Of_Layers + 1):
+            Layer_Root_Fraction = pETState.Root_Fraction[Layer]
+            #'PAW_Depletion_Today is profile depletion prorated by fraction of roots in each layer
+            PAW_Depletion_Today += (1 - (WC[Layer] - pSoilModelLayer.PWP_Water_Content[Layer]) / (pSoilModelLayer.FC_Water_Content[Layer] - pSoilModelLayer.PWP_Water_Content[Layer])) * Layer_Root_Fraction
+            if Layer > 1 and Layer_Root_Fraction < 1e-12:
+                break #'All layers with roots plus one extra layer are refilled. Leave the loop
+        pSoilState.PAW_Depletion[DOY] = PAW_Depletion_Today
+        
     #'Find irrigation events
-    NID = net_irrigations[DOY]
+    
     
     if (pSoilState.Refill_Today or pSoilState.Auto_Irrigation) and NID <= 0.0:
        NID = SetAutoIrrigation(DOY, pSoilState.PAW_Trigger, pSoilState.CWSI_Trigger, Number_Of_Layers, 
@@ -457,6 +474,21 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
 
     #Prec = ReadInputs.Precip(DOY)
 
+
+    #'Begin Mingliang 7/12/2025
+    Nitrate_N_Fertilization = 0.
+    Ammonium_N_Fertilization = 0.
+    if Recommended_N_Fertilization: #LML note: might overwrite existing fertilization
+        #'Fertilizer recommendation is expressed only as the mass of N-nitrate to apply
+        Nitrate_N_Fertilization = Nitrate_N_Recommended
+        pCS_Fertilization.Nitrate_Fertilization_Rate[DOY] = Nitrate_N_Fertilization #'kg/m2
+        #Crop.RecommendedNFertilization = False
+    else:
+        Nitrate_N_Fertilization = pCS_Fertilization.Nitrate_Fertilization_Rate[DOY] #'kg/m2
+        Ammonium_N_Fertilization = pCS_Fertilization.Ammonium_Fertilization_Rate[DOY] #'kg/m2
+
+    #Fertilization_Rate(DOY) = Nitrate_N_Fertilization + Ammonium_N_Fertilization
+    #'END Mingliang 7/12/2025
 
     #'Find fertilization event. THIS WILL BE LATER IMPLEMENTED IN A FERTILIZATION SUB. NOTE: ONLY NITRATE N IS CONSIDERED HERE
     #Nitrate_N_Fertilization = Mineral_Fertilization_Rate * (Nitrate_Fraction / 100) / 10000.0 #'Convert kg/ha to kg/m2
@@ -476,7 +508,7 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
     if Water_Flux_In > 0: 
         #Water_Chemical_Concentration = (Irrig_Chemical_Conc * NID + Precip_Chemical_Conc * Prec) / Water_Flux_In
         if NID > 0:
-            pSoilState.Nitrate_N_In_Water[DOY] = Irrig_Chemical_Conc * NID / 1000000. # 'Convert mg/l to kg  'Mingliang June 3
+            pSoilState.Nitrate_N_In_Water[DOY] = Irrig_Chemical_Conc * NID / 1000000. # 'kgN/m2 Mingliang 7/17/2025
         Water_Chemical_Concentration = (Irrig_Chemical_Conc * NID + Precip_Chemical_Conc * Prec) / Water_Flux_In #'mg/l 'Mingliang June 3
         Water_Chemical_Concentration = Water_Chemical_Concentration / 1000000. #  'Convert mg/l to kg/kg  'Mingliang June 3
     Number_Of_Pulses = 0  #CHECK!!!
@@ -547,13 +579,18 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
         Final_Profile_Chemical_Mass += Chem_Mass[L]
     pSoilFlux.Chemical_Balance[DOY] = (Initial_Profile_Chemical_Mass + Water_Flux_In * Water_Chemical_Concentration + Nitrate_N_Fertilization \
                - (Final_Profile_Chemical_Mass + Cumulative_Pulse_N_Leaching)) * 10000 #'Convert kg/m2 to kg/ha
+    
+    if math.fabs(pSoilFlux.Chemical_Balance[DOY]) > 0.0000000001:
+        print('Chemical Balance Error')
+        exit()
+        
     #'Calculates final soil water profile (kg/m2 or mm)
     Final_Soil_Water_Profile = 0
     for L in range(1, Number_Of_Layers + 1):
         Final_Soil_Water_Profile += WC[L] * dz[L] * WD
     pSoilFlux.Water_Balance[DOY] = (Initial_Soil_Water_Profile + Water_Flux_In - (Final_Soil_Water_Profile + Cumulative_Pulse_Deep_Drainage))
     
-    if pSoilFlux.Water_Balance[DOY] > 0.0000000001:
+    if math.fabs(pSoilFlux.Water_Balance[DOY]) > 0.0000000001:
         print('Water Balance Error')
         exit()
 

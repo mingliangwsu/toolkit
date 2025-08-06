@@ -22,6 +22,13 @@ def get_excel_value(Cells, cell_reference):
     row_index, col_index = excel_cell_to_indices(cell_reference)
     return Cells.iloc[row_index, col_index]
 
+def get_excel_boolean(Cells, cell_reference):
+    row_index, col_index = excel_cell_to_indices(cell_reference)
+    v = Cells.iloc[row_index, col_index]
+    true_values = {'true', '1', 'yes', 'on', 'y'}
+    is_true = str(v).strip().lower() in true_values
+    return is_true
+
 def set_excel_value(Cells, cell_reference, value):
     row_index, col_index = excel_cell_to_indices(cell_reference)
     Cells.iloc[row_index, col_index] = value
@@ -37,3 +44,7 @@ def get_cell_int(cellvalue,default = 0):
         return int(cellvalue)
     else:
         return default
+    
+def is_blank_or_zero_or_nan(s):
+    strs = str(s).strip()
+    return strs == "" or strs == "0" or pd.isna(s)

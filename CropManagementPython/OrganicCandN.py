@@ -163,6 +163,7 @@ def Mineralization(DOY, Crop_Number, pSoilModelLayer, pSoilState, pSoilFlux, Cro
         pSoilFlux.Daily_Profile_Oxidized_SOM_C_Transfer_Back_To_SOM[DOY] += pSoilFlux.Layer_Oxidized_SOM_C_Transfer_Back_To_SOM
         pSoilFlux.Daily_Profile_Oxidized_SOM_N_Transfer_To_Ammonium_Pool[DOY] += pSoilFlux.Layer_Oxidized_SOM_N_Transferred_To_Ammonium
         pSoilFlux.Layer_Mineralization[DOY][Layer] = pSoilFlux.Layer_Oxidized_SOM_N_Transferred_To_Ammonium
+        pSoilFlux.Cumulative_Mineralization_All_Layers += pSoilFlux.Layer_Mineralization[DOY][Layer]
 
     
     #'Prepare Mineralization Outputs

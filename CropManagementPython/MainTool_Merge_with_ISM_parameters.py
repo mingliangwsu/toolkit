@@ -47,17 +47,32 @@ class CS_Fertilization:
     Fertilization_DOY = dict()
     Mineral_Fertilizer_Name = dict()
     Mineral_Fertilization_Rate = dict()
-    Nitrate_Fraction = dict()
-    Ammonium_Fraction = dict()
-    Ammonia_Fraction = dict()
+    #Nitrate_Fraction = dict()
+    #Ammonium_Fraction = dict()
+    #Ammonia_Fraction = dict()
     Nitrate_Fertilization_Rate = dict()
     Ammonium_Fertilization_Rate = dict()
     Organic_Fertilizer_Name = dict()
     Organic_Fertilizer_Rate = dict()
-    Organic_Fertilizer_C_Fraction = dict()
-    Organic_Fertilizer_N_Fraction = dict()
+    #Organic_Fertilizer_C_Fraction = dict()
+    #Organic_Fertilizer_N_Fraction = dict()
+    Organic_Fertilizer_C_Mass = dict()
+    Organic_Fertilizer_N_Mass = dict()
     Application_Method_Number = dict()
     
+    #and others
+    
+class CS_Min_Fertilizer:
+    Mineral_Fert_Name = ""
+    Nitrate_mass_percentage = -9999
+    Ammonium_mass_percentage = -9999
+    Ammonia_mass_percentage = -9999
+    
+class CS_Organic_Fertilizer:
+    Organic_Fertilizer_Name = ""
+    Carbon_mass_percentage = -9999
+    Nitrogen_mass_percentage = -9999
+    HalfLife_days = -9999
     #and others
 
 def InitFertilization(pCS_Fertilization):
@@ -65,15 +80,18 @@ def InitFertilization(pCS_Fertilization):
         pCS_Fertilization.Fertilization_DOY[i] = i
         pCS_Fertilization.Mineral_Fertilizer_Name[i] = ''
         pCS_Fertilization.Mineral_Fertilization_Rate[i] = 0.
-        pCS_Fertilization.Nitrate_Fraction[i] = 0.
-        pCS_Fertilization.Ammonium_Fraction[i] = 0.
-        pCS_Fertilization.Ammonia_Fraction[i] = 0.
+        #pCS_Fertilization.Nitrate_Fraction[i] = 0.
+        #pCS_Fertilization.Ammonium_Fraction[i] = 0.
+        #pCS_Fertilization.Ammonia_Fraction[i] = 0.
         pCS_Fertilization.Nitrate_Fertilization_Rate[i] = 0.
         pCS_Fertilization.Ammonium_Fertilization_Rate[i] = 0.
         pCS_Fertilization.Organic_Fertilizer_Name[i] = ''
         pCS_Fertilization.Organic_Fertilizer_Rate[i] = 0.
-        pCS_Fertilization.Organic_Fertilizer_C_Fraction[i] = 0.
-        pCS_Fertilization.Organic_Fertilizer_N_Fraction[i] = 0.
+        #pCS_Fertilization.Organic_Fertilizer_C_Fraction[i] = 0.
+        #pCS_Fertilization.Organic_Fertilizer_N_Fraction[i] = 0.
+        pCS_Fertilization.Organic_Fertilizer_C_Mass[i] = 0.
+        pCS_Fertilization.Organic_Fertilizer_N_Mass[i] = 0.
+        
         pCS_Fertilization.Application_Method_Number[i] = 0
 
 def ReadCropParameters(Cells,Crop,col_letter):
@@ -101,6 +119,7 @@ def ReadCropParameters(Cells,Crop,col_letter):
     Crop.Maximum_N_Concentration_Maturity = float(get_excel_value(Cells,f'{col_letter}28'))
     Crop.Critical_N_Concentration_Maturity = float(get_excel_value(Cells,f'{col_letter}29'))
     Crop.Minimum_N_Concentration_Maturity = float(get_excel_value(Cells,f'{col_letter}30'))
+    Crop.Maximum_Daily_N_Uptake_Rate = float(get_excel_value(Cells,f'{col_letter}31')) / 10000. #'Mingliang 7/19/2025
     #Crop.Potential_N_Uptake = float(get_excel_value(Cells,f'{col_letter}31'))
     
 def is_number(s):
@@ -221,26 +240,79 @@ def GetISMCropGrowthDOYParameters(agWeatherStationID,ISM_cropname,pCropGrowth):
     pCropGrowth.Maturity_DOY = int(ISM_cropInfo['growthEndDate'])
     #pCropGrowth.Harvest_DOY = int(ISM_cropInfo['plantDate'])
     
-def ReadFertilization(Cells,pCS_Fertilization):
+def ReadFertilization(Cells,pCS_Fertilization,pCS_Min_Fertilizer,pCS_Organic_Fertilizer):
     start_row_idx = 46 - 1
     end_row_idx = 50 - 1
+    Seasonal_Scheduled_Fertilization = 0
     for i in range(start_row_idx, end_row_idx + 1):
         doy = get_cell_int(Cells.iloc[i, 2 - 1])
         if doy > 0:
             pCS_Fertilization.Fertilization_DOY[doy] = doy
-            pCS_Fertilization.Mineral_Fertilizer_Name[doy] = Cells.iloc[i, 3 - 1]
-            pCS_Fertilization.Mineral_Fertilization_Rate[doy] = get_cell_float(Cells.iloc[i, 4 - 1])
-            pCS_Fertilization.Nitrate_Fraction[doy] = get_cell_float(Cells.iloc[i, 5 - 1])
-            pCS_Fertilization.Ammonium_Fraction[doy] = get_cell_float(Cells.iloc[i, 6 - 1])
-            pCS_Fertilization.Ammonia_Fraction[doy] = get_cell_float(Cells.iloc[i, 7 - 1])
-            #'Store fertilization rates in kg/m2
-            pCS_Fertilization.Nitrate_Fertilization_Rate[doy] = (pCS_Fertilization.Mineral_Fertilization_Rate[doy] * pCS_Fertilization.Nitrate_Fraction[doy] / 100.) / 10000. # 'Convert kg/ha to kg/m2
-            pCS_Fertilization.Ammonium_Fertilization_Rate[doy] = (pCS_Fertilization.Mineral_Fertilization_Rate[doy] * (pCS_Fertilization.Ammonium_Fraction[doy] + pCS_Fertilization.Ammonia_Fraction[doy]) / 100.) / 10000. # 'Convert kg/ha to kg/m2
-            pCS_Fertilization.Organic_Fertilizer_Name[doy] = get_cell_float(Cells.iloc[i, 8 - 1])
-            pCS_Fertilization.Organic_Fertilizer_Rate[doy] = get_cell_float(Cells.iloc[i, 9 - 1])
-            pCS_Fertilization.Organic_Fertilizer_C_Fraction[doy] = get_cell_float(Cells.iloc[i, 10 - 1])
-            pCS_Fertilization.Organic_Fertilizer_N_Fraction[doy] = get_cell_float(Cells.iloc[i, 11 - 1])
-            pCS_Fertilization.Application_Method_Number[doy] = get_cell_int(Cells.iloc[i, 12 - 1])
+            
+            #mineral fertilizer
+            name = Cells.iloc[i, 3 - 1]
+            if not is_blank_or_zero_or_nan(name):
+                pCS_Fertilization.Mineral_Fertilizer_Name[doy] = name
+                pCS_Fertilization.Mineral_Fertilization_Rate[doy] = get_cell_float(Cells.iloc[i, 4 - 1])
+                #pCS_Fertilization.Nitrate_Fraction[doy] = get_cell_float(Cells.iloc[i, 5 - 1])
+                #pCS_Fertilization.Ammonium_Fraction[doy] = get_cell_float(Cells.iloc[i, 6 - 1])
+                #pCS_Fertilization.Ammonia_Fraction[doy] = get_cell_float(Cells.iloc[i, 7 - 1])
+                #'Store fertilization rates in kg/m2
+                
+                Nitrate_Fract = 0.
+                Ammonium_Fract = 0.
+                Ammonia_Fract = 0.
+                if pCS_Fertilization.Mineral_Fertilizer_Name[doy] in pCS_Min_Fertilizer:
+                    Nitrate_Fract = pCS_Min_Fertilizer[pCS_Fertilization.Mineral_Fertilizer_Name[doy]].Nitrate_mass_percentage / 100. 
+                    Ammonium_Fract = pCS_Min_Fertilizer[pCS_Fertilization.Mineral_Fertilizer_Name[doy]].Ammonium_mass_percentage / 100. 
+                    Ammonia_Fract = pCS_Min_Fertilizer[pCS_Fertilization.Mineral_Fertilizer_Name[doy]].Ammonia_mass_percentage / 100. 
+            
+                pCS_Fertilization.Nitrate_Fertilization_Rate[doy] = (pCS_Fertilization.Mineral_Fertilization_Rate[doy] * Nitrate_Fract) / 10000. # 'Convert kg/ha to kg/m2
+                pCS_Fertilization.Ammonium_Fertilization_Rate[doy] = (pCS_Fertilization.Mineral_Fertilization_Rate[doy] * (Ammonium_Fract + Ammonia_Fract)) / 10000. # 'Convert kg/ha to kg/m2
+                Seasonal_Scheduled_Fertilization += pCS_Fertilization.Nitrate_Fertilization_Rate[doy] \
+                                                    + pCS_Fertilization.Ammonium_Fertilization_Rate[doy]
+            orgname = Cells.iloc[i, 5 - 1]
+            if not is_blank_or_zero_or_nan(orgname):
+                
+                pCS_Fertilization.Organic_Fertilizer_Name[doy] = orgname
+                pCS_Fertilization.Organic_Fertilizer_Rate[doy] = get_cell_float(Cells.iloc[i, 6 - 1])
+                C_Fract = 0.
+                N_Fract = 0.
+                HalfLife = 0.
+                if orgname in pCS_Organic_Fertilizer:
+                    C_Fract = pCS_Organic_Fertilizer[orgname].Carbon_mass_percentage / 100. 
+                    N_Fract = pCS_Organic_Fertilizer[orgname].Nitrogen_mass_percentage / 100. 
+                    HalfLife = pCS_Organic_Fertilizer[orgname].HalfLife_days
+                pCS_Fertilization.Organic_Fertilizer_Carbon_Mass[doy] = C_Fract * pCS_Fertilization.Organic_Fertilizer_Rate[doy]
+                pCS_Fertilization.Organic_Fertilizer_Nitrogen_Mass[doy] = N_Fract * pCS_Fertilization.Organic_Fertilizer_Rate[doy]
+                pCS_Fertilization.Organic_Fertilizer_HalfLife[doy] = HalfLife
+            
+            pCS_Fertilization.Application_Method_Number[doy] = get_cell_int(Cells.iloc[i, 7 - 1])
+    return Seasonal_Scheduled_Fertilization
+
+def ReadMinFertilizer(Cells,pCS_Min_Fertilizer):
+    start_row_idx = 46 - 1
+    end_row_idx = 50 - 1
+    for i in range(start_row_idx, end_row_idx + 1):
+        name = Cells.iloc[i, 8 - 1]
+        if not is_blank_or_zero_or_nan(name) and name not in pCS_Min_Fertilizer:
+            pCS_Min_Fertilizer[name] = CS_Min_Fertilizer()
+            pCS_Min_Fertilizer[name].Mineral_Fert_Name = name
+            pCS_Min_Fertilizer[name].Nitrate_mass_percentage = get_cell_float(Cells.iloc[i, 9 - 1])
+            pCS_Min_Fertilizer[name].Ammonium_mass_percentage = get_cell_float(Cells.iloc[i, 10 - 1])
+            pCS_Min_Fertilizer[name].Ammonia_mass_percentage = get_cell_float(Cells.iloc[i, 11 - 1])
+        
+def ReadOrganicFertilizer(Cells,pCS_Organic_Fertilizer):
+    start_row_idx = 46 - 1
+    end_row_idx = 50 - 1
+    for i in range(start_row_idx, end_row_idx + 1):
+        name = Cells.iloc[i, 12 - 1]
+        if not is_blank_or_zero_or_nan(name) and name not in pCS_Organic_Fertilizer:
+            pCS_Organic_Fertilizer[name] = CS_Organic_Fertilizer()
+            pCS_Organic_Fertilizer[name].Organic_Fertilizer_Name = name
+            pCS_Organic_Fertilizer[name].Carbon_mass_percentage = get_cell_float(Cells.iloc[i, 13 - 1])
+            pCS_Organic_Fertilizer[name].Nitrogen_mass_percentage = get_cell_float(Cells.iloc[i, 14 - 1])
+            pCS_Organic_Fertilizer[name].HalfLife_days = get_cell_float(Cells.iloc[i, 15 - 1])
         
 def ReadNetIrrigation(Cells,Irrigation):
     start_row_idx = 58 - 1
@@ -396,7 +468,7 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
                     elif NUnit == 'ppm':
                         pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] * pSoilModelLayer.Bulk_Density[j] * pSoilModelLayer.Layer_Thickness[j] / 1000    #'Convert ppm to kg/m2
                 else:
-                    pSoilState.Nitrate_N_Content[DOY][j] = 10 / 10000   #'Convert kg/ha to kg/m2         'Mingliang 6/17/2025
+                    pSoilState.Nitrate_N_Content[DOY][j] = 0. #10 / 10000   #'Convert kg/ha to kg/m2         'Mingliang 6/17/2025
                     
                 if Ammonium[i] >= 0 and not pd.isna(Ammonium[i]):
                     if NUnit == 'kgN_ha':
@@ -431,18 +503,19 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     for i in range(Number_Initialization_Layers + 1, NML + 1):
             pSoilModelLayer.Layer_Thickness[i] = pSoilModelLayer.Layer_Thickness[Number_Initialization_Layers]
             pSoilState.Water_Content[DOY][i] = pSoilState.Water_Content[DOY][Number_Initialization_Layers]
-            pSoilState.Water_Filled_Porosity[DOY][i] = pSoilState.Water_Content[DOY][i] / pSoilModelLayer.Saturation_Water_Content[i]
+            pSoilState.Water_Filled_Porosity[DOY][i] = pSoilState.Water_Filled_Porosity[DOY][Number_Initialization_Layers] #pSoilState.Water_Content[DOY][i] / pSoilModelLayer.Saturation_Water_Content[i]
             #'Mingliang Soil water potential was changed to a two-dimensional array
             #'        Soil_Water_Potential(i) = WP(Saturation_Water_Content(i), Water_Content(DOY, i), Air_Entry_Potential(i), B_value(i))
             
-            pSoilState.Soil_Water_Potential[DOY][i] = WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
+            pSoilState.Soil_Water_Potential[DOY][i] = pSoilState.Soil_Water_Potential[DOY][Number_Initialization_Layers] #WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
 
             pSoilState.Nitrate_N_Content[DOY][i] = pSoilState.Nitrate_N_Content[DOY][Number_Initialization_Layers]
             pSoilState.Ammonium_N_Content[DOY][i] = pSoilState.Ammonium_N_Content[DOY][Number_Initialization_Layers]
             #'        Initialize soil organi carbon and nitrogen
             #'        Convert percent organic matter to soil organic carbon in kg C/m2 soil
-            pSoilModelLayer.Soil_Mass[i] = pSoilModelLayer.Bulk_Density[i] * 1000. # * Layer_Thickness(i) 'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
-            SOC = pSoilModelLayer.Soil_Mass[i] * (pSoilModelLayer.Percent_Soil_Organic_Matter[i] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
+            pSoilModelLayer.Soil_Mass[i] = pSoilModelLayer.Soil_Mass[Number_Initialization_Layers] #pSoilModelLayer.Bulk_Density[i] * 1000. # * Layer_Thickness(i) 'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
+            #SOC = pSoilModelLayer.Soil_Mass[i] * (pSoilModelLayer.Percent_Soil_Organic_Matter[i] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
+            SOC = pSoilModelLayer.Soil_Mass[Number_Initialization_Layers] * (pSoilModelLayer.Percent_Soil_Organic_Matter[Number_Initialization_Layers] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
             pSoilState.Soil_Organic_Carbon[DOY][i] = SOC
             pSoilState.Soil_Organic_Nitrogen[DOY][i] = SOC / SOC_C_N_Ratio
     #'Mingliang: End of new section added
@@ -593,19 +666,21 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
                                           pSoilState, pCS_Weather, irrigations,
                                           Irrigation_Recommendation,
                                           pCS_Fertilization, Today_Crop_N_Demand, 
-                                          Available_For_Active_Uptake):
+                                          Available_For_Active_Uptake,
+                                          N_Fert_Recommended_Amount):
 #Items from "7-day daily budget table" of Irrigation Schedular, plus nitrogen 
 #budget
     #06122025LML consistent with crop output
     preday_Cumulative_N_Uptake = 0
     #handle first day issue
-    if DOY == 1: 
-        if 366 in pCropState.Cumulative_N_Uptake and pCropState.Cumulative_N_Uptake[366] > 1e-12:
-            preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[366]
+    if pCropState is not None:
+        if DOY == 1: 
+            if 366 in pCropState.Cumulative_N_Uptake and pCropState.Cumulative_N_Uptake[366] > 1e-12:
+                preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[366]
+            else:
+                preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[365]
         else:
-            preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[365]
-    else:
-        preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[DOY - 1]
+            preday_Cumulative_N_Uptake = pCropState.Cumulative_N_Uptake[DOY - 1]
 
     BudgetOutRow = dict()
     BudgetOutRow["DAE"] = DAE
@@ -618,19 +693,26 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
     BudgetOutRow["Irrigation_Recommendation (in)"] = mm_to_inch(Irrigation_Recommendation)
     BudgetOutRow["Water_Stress_Index (0-1)"] = pETState.Water_Stress_Index[DOY]
     #BudgetOutRow["Today_Crop_N_Demand (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(Today_Crop_N_Demand)
-    BudgetOutRow["N Uptake Rate (kg/ha/day)"] = (pCropState.Cumulative_N_Uptake[DOY] - preday_Cumulative_N_Uptake) * 10000 #'Convert kg/m2 to kg/ha #06122025LML KgPerSquareMeter_to_KgPerHa(pCropState.N_Uptake[DOY])
+    if pCropState is not None:
+        BudgetOutRow["N Uptake Rate (kg/ha/day)"] = (pCropState.Cumulative_N_Uptake[DOY] - preday_Cumulative_N_Uptake) * 10000 #'Convert kg/m2 to kg/ha #06122025LML KgPerSquareMeter_to_KgPerHa(pCropState.N_Uptake[DOY])
+    else:
+        BudgetOutRow["N Uptake Rate (kg/ha/day)"] = 0
     BudgetOutRow["N Fertilization (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(pCS_Fertilization.Nitrate_Fertilization_Rate[DOY] 
                                                                           + pCS_Fertilization.Ammonium_Fertilization_Rate[DOY])
     BudgetOutRow["N Aailable (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(Available_For_Active_Uptake)
     #BudgetOutRow["N Deficit (kg/ha)"] = max(0.0,BudgetOutRow["Today_Crop_N_Demand (kg/ha)"] - BudgetOutRow["N Uptake (kg/ha)"])
-    BudgetOutRow["Nitrogen_Stress_Index (0-1)"] = pCropState.Nitrogen_Stress_Index[DOY]
+    if pCropState is not None:
+        BudgetOutRow["Nitrogen_Stress_Index (0-1)"] = pCropState.Nitrogen_Stress_Index[DOY]
+    else:
+        BudgetOutRow["Nitrogen_Stress_Index (0-1)"] = 0
+    BudgetOutRow["N Fertilization Recommendation (kg/ha)"] = KgPerSquareMeter_to_KgPerHa(N_Fert_Recommended_Amount)
     DailyBudgetOutputs[Crop_Number].loc[len(DailyBudgetOutputs[Crop_Number])] = BudgetOutRow
     
 
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_06052025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_07232025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -671,6 +753,13 @@ Area = float(get_excel_value(InputCells,'A12'))
 Irrigation_Method = get_excel_value(InputCells,'B12')
 Water_Source = int(get_excel_value(InputCells,'C12'))                          #1: River 2: Canal 3: Groundwater
 Water_N_Conc = float(get_excel_value(InputCells,'D12')) #(mg/L)
+
+Auto_Fertilization = get_excel_boolean(InputCells,'E41')   #'Mingliang 7/18/2025  Should set True for estimating N recommendation after TODAY.
+Auto_Irrigation  = get_excel_boolean(InputCells,'G52')     #'Mingliang 7/20/2025  Should set True for estimating irrigation recommendation after TODAY.
+Seasonal_Scheduled_Fertilization = 0. #'Mingliang 7/20/2025
+
+Begin_Crop_Senescence = False    #'Mingliang 6/21/2025
+Potential_Biomass_At_Maturity = 0
 
 ISM_cropnames = {'Triticale': 'Triticale (for forage)','Silage Corn': 'Corn (silage)'}  #TODO
 
@@ -759,8 +848,17 @@ for crop in range(1,Number_Of_Crops + 1):
 
 #fertilization
 pCS_Fertilization = CS_Fertilization()
+
+pCS_Min_Fertilizer = dict()
+pCS_Organic_Fertilizer = dict()
+
+ReadMinFertilizer(InputCells,pCS_Min_Fertilizer)
+ReadOrganicFertilizer(InputCells,pCS_Organic_Fertilizer)
+
 InitFertilization(pCS_Fertilization)
-ReadFertilization(InputCells,pCS_Fertilization)
+Seasonal_Scheduled_Fertilization = ReadFertilization(InputCells,pCS_Fertilization,pCS_Min_Fertilizer,pCS_Organic_Fertilizer)
+
+
 
 #irrigation
 DOY_Last_Scheduled_Irrigation = 0
@@ -892,7 +990,8 @@ DailyBudgetColums = {
     "N Fertilization (kg/ha)": "float64",
     "N Aailable (kg/ha)": "float64",
      #"N Deficit (kg/ha)": "float64",
-    "Nitrogen_Stress_Index (0-1)": "float64"
+    "Nitrogen_Stress_Index (0-1)": "float64",
+    "N Fertilization Recommendation (kg/ha)": "float64",
     }
 
 
@@ -1056,11 +1155,16 @@ DAE = 0
 
 Number_Of_Layers = pSoilModelLayer.Number_Model_Layers
 #'Begin time loop
-while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
+while Days_Elapsed < (Number_Of_Days_To_Simulate + 1):
     Today_Crop_N_Demand = 0.0
+    Today_N_Uptake = 0.0
     Available_N = 0.0
+    
     #Crop_Number = ReadInputs.CropOrder(1)
     InitialSoilProfile(DOY,pBalance,pSoilState,pSoilModelLayer)
+    Begin_Crop_Senescence = False    #'Mingliang 6/21/2025
+    Recommended_N_Fertilization = False
+    N_Fert_Recommended_Amount = 0.
     #'Set up Crop Number 1
     if DOY == CropGrowths[1].Emergence_DOY:
         Crop_Active = True
@@ -1082,10 +1186,15 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
             
             
             Biomass(Day_Of_The_Year, True, pCropState, CropParamaters[1], pCS_Weather, pETState) #Calculate potential biomass for the entire season
-            ReferencePlantNConcentration(Day_Of_The_Year, pCropState, CropParamaters[1], CropGrowths[1])
+            Begin_Crop_Senescence = ReferencePlantNConcentration(Day_Of_The_Year, pCropState, CropParamaters[1], CropGrowths[1], Begin_Crop_Senescence)
             Day_Of_The_Year += 1
             if Day_Of_The_Year > 365: Day_Of_The_Year = 1
+            
+        tpre_doy = Day_Of_The_Year - 1
+        if tpre_doy == 0: tpre_doy = 365
+        Potential_Biomass_At_Maturity = pCropState.Cumulative_Potential_Crop_Biomass[tpre_doy]
     #'Set up Crop Number 2
+    Begin_Crop_Senescence = False    #'Mingliang 6/21/2025
     if 2 in CropGrowths and DOY == CropGrowths[2].Emergence_DOY:
         Crop_Active = True
         Crop_Number = 2
@@ -1108,11 +1217,14 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
             
             Biomass(Day_Of_The_Year, True, pCropState, CropParamaters[2], 
                     pCS_Weather, pETState) #Calculate potential biomass for the entire season
-            ReferencePlantNConcentration(Day_Of_The_Year, pCropState, 
-                                         CropParamaters[2], CropGrowths[2])
+            Begin_Crop_Senescence = ReferencePlantNConcentration(Day_Of_The_Year, pCropState, 
+                                         CropParamaters[2], CropGrowths[2], Begin_Crop_Senescence)
             Day_Of_The_Year += 1
             if Day_Of_The_Year > 365: Day_Of_The_Year = 1
 
+        tpre_doy = Day_Of_The_Year - 1
+        if tpre_doy == 0: tpre_doy = 365
+        Potential_Biomass_At_Maturity = pCropState.Cumulative_Potential_Crop_Biomass[tpre_doy]
     print(f'DOY:{DOY} DAE:{DAE} Crop_Number:{Crop_Number}')
 
 
@@ -1121,12 +1233,14 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
         #Crop_Number = 0
         #DAE = 0
         pSoilState.Auto_Irrigation = False
+        #Auto_Irrigation = False
 
     if Crop_Number == 2 and (DOY == CropGrowths[2].Maturity_DOY or DOY == CropGrowths[2].Harvest_DOY):
         Crop_Active = False
         #Crop_Number = 0
         #DAE = 0
         pSoilState.Auto_Irrigation = False
+        #Auto_Irrigation = False
 
 
     if Crop_Active: 
@@ -1145,15 +1259,21 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
         Biomass(DOY, False, pCropState, CropParamaters[Crop_Number], 
                 pCS_Weather, pETState)
         
-        Today_Crop_N_Demand,Available_N = \
+        Today_Crop_N_Demand,Available_N, Today_N_Uptake = \
             NitrogenUptake(DOY, pCropState, CropParamaters[Crop_Number], 
                        CropGrowths[Crop_Number], pETState, pSoilModelLayer, 
                        pSoilState)
+        Recommended_N_Fertilization, N_Fert_Recommended_Amount = \
+            FertilizerRecommendation(DOY, pCropState, CropParamaters[Crop_Number], 
+                                 CropGrowths[Crop_Number], pETState, 
+                                 pSoilModelLayer, pSoilState, 
+                                 Seasonal_Scheduled_Fertilization, pCS_Fertilization, 
+                                 Potential_Biomass_At_Maturity, Auto_Fertilization)
         #'synchronize days after emergence (DAE) and day of the year (DOY)
         DOY_At_DAE[DAE] = DOY
         #DAE += 1
     else:
-        PotET(DOY, False, False, pCropState, None, pCS_Weather, pETState) #Crop is not active and only potential evaporation is calculated
+        PotET(DOY, False, False, pCropState, None, pCS_Weather, pETState) #Crop is not active and only potential and actual evaporation is calculated
         ActEvaporation(DOY,pSoilModelLayer,pSoilState,pETState, False)
         
     SoilTemperature(DOY,pCS_Weather.Tmax[DOY],pCS_Weather.Tmin[DOY],
@@ -1173,48 +1293,55 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
     #                        -9999, pSoilState, pETState, pSoilModelLayer)
     
     #05202025LML identify irrigation method for estimating recommendation
-    if DOY in autoirrigation_info:
-        if autoirrigation_info[DOY][0] == 1:
-            Irrigation_Recommendation_Option = 'PAW Depletion'
-            Irrigation_Recommendation_Parameter = autoirrigation_info[DOY][1]
-        elif autoirrigation_info[DOY][0] == 2:
-            Irrigation_Recommendation_Option = 'CWSI'
-            Irrigation_Recommendation_Parameter = autoirrigation_info[DOY][2]
-        else:
-            Irrigation_Recommendation_Option = None
-            Irrigation_Recommendation_Parameter = None
-    #print(f'{Irrigation_Recommendation_Option} {Irrigation_Recommendation_Parameter}')
-    
-    if Crop_Active and Irrigation_Recommendation_Option == 'PAW Depletion':
-      Irrigation_Recommendation = \
-          SetAutoIrrigation(DOY, True, False, Number_Of_Layers, 
-                            Irrigation_Recommendation_Parameter, -9999, False, 
-                            -9999, pSoilState, pETState, pSoilModelLayer, Water_Depth_To_Refill_fc)
-    elif Crop_Active and Irrigation_Recommendation_Option == 'CWSI':
-      Irrigation_Recommendation = \
-          SetAutoIrrigation(DOY, False, True, Number_Of_Layers, 
-                            -9999, Irrigation_Recommendation_Parameter, False, 
-                            -9999, pSoilState, pETState, pSoilModelLayer, Water_Depth_To_Refill_fc)  
-    elif Irrigation_Recommendation_Option == 'Refill':
-      Irrigation_Recommendation = \
-          SetAutoIrrigation(DOY, False, False, Number_Of_Layers, 
-                            -9999, -9999, True, 
-                            Irrigation_Recommendation_Parameter, pSoilState, 
-                            pETState, pSoilModelLayer, Water_Depth_To_Refill_fc)  
+    if Auto_Irrigation: #08052025LML
+        if DOY in autoirrigation_info:
+            if autoirrigation_info[DOY][0] == 1:
+                Irrigation_Recommendation_Option = 'PAW Depletion'
+                Irrigation_Recommendation_Parameter = autoirrigation_info[DOY][1]
+            elif autoirrigation_info[DOY][0] == 2:
+                Irrigation_Recommendation_Option = 'CWSI'
+                Irrigation_Recommendation_Parameter = autoirrigation_info[DOY][2]
+            else:
+                Irrigation_Recommendation_Option = None
+                Irrigation_Recommendation_Parameter = None
+        #print(f'{Irrigation_Recommendation_Option} {Irrigation_Recommendation_Parameter}')
+        
+        if Crop_Active and Irrigation_Recommendation_Option == 'PAW Depletion':
+          Irrigation_Recommendation = \
+              SetAutoIrrigation(DOY, True, False, Number_Of_Layers, 
+                                Irrigation_Recommendation_Parameter, -9999, False, 
+                                -9999, pSoilState, pETState, pSoilModelLayer, Water_Depth_To_Refill_fc)
+        elif Crop_Active and Irrigation_Recommendation_Option == 'CWSI':
+          Irrigation_Recommendation = \
+              SetAutoIrrigation(DOY, False, True, Number_Of_Layers, 
+                                -9999, Irrigation_Recommendation_Parameter, False, 
+                                -9999, pSoilState, pETState, pSoilModelLayer, Water_Depth_To_Refill_fc)  
+        elif Irrigation_Recommendation_Option == 'Refill':
+          Irrigation_Recommendation = \
+              SetAutoIrrigation(DOY, False, False, Number_Of_Layers, 
+                                -9999, -9999, True, 
+                                Irrigation_Recommendation_Parameter, pSoilState, 
+                                pETState, pSoilModelLayer, Water_Depth_To_Refill_fc)  
+    else:
+        Irrigation_Recommendation = 0.0
           
     #print(f'Irrigation_Recommendation:{Irrigation_Recommendation} ')
     net_irrigation_today,fertilizer_today = \
         WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, 
                            Water_N_Conc, 
                            pCS_Weather.Precipitation[DOY], 
-                           pCS_Fertilization.Nitrate_Fertilization_Rate[DOY], 
-                           pCS_Fertilization.Ammonium_Fertilization_Rate[DOY], 
-                           pCS_Fertilization.Nitrate_Fraction[DOY], 
+                           #pCS_Fertilization.Nitrate_Fertilization_Rate[DOY], 
+                           #pCS_Fertilization.Ammonium_Fertilization_Rate[DOY], 
+                           pCS_Fertilization,
+                           -9999., 
                            AutoIrrigations, 
                            pSoilFlux, 
                            Crop_Active,
                            pETState,
-                           Water_Depth_To_Refill_fc)
+                           Water_Depth_To_Refill_fc,
+                           Auto_Irrigation,
+                           Recommended_N_Fertilization, 
+                           N_Fert_Recommended_Amount)
     
     #output managements
     if net_irrigation_today >= 1e-12 or fertilizer_today >=1e-12:
@@ -1248,7 +1375,46 @@ while Days_Elapsed <= (Number_Of_Days_To_Simulate + 1):
                                                   pSoilState, pCS_Weather, net_irrigations,
                                                   Irrigation_Recommendation,
                                                   pCS_Fertilization, Today_Crop_N_Demand, 
-                                                  Available_N)
+                                                  Available_N, N_Fert_Recommended_Amount)
+    elif not Crop_Active and DAE == 0:
+        #add budget output before emergence
+        #08052025LML It's a tricky to set the Crop_Number before the crop is planted
+        #here set the crop that is going to be planted
+        if Number_Of_Crops == 1:
+            Crop_Num = 1
+        else:
+            if Emergence_DOY_2 > Emergence_DOY_1: #within one year
+                if DOY < Emergence_DOY_1: Crop_Num = 1
+                else: Crop_Num = 2
+            else: #Crop 1 emerged in first year; crop 2 emerged in second year
+                if DOY < Emergence_DOY_1 and DOY > Emergence_DOY_2: Crop_Num = 1
+                else: Crop_Num = 2
+        
+        tAvailable_N = 0.0
+        #08052025LML: for budget output before emergence day
+        for Layer in range(2, Number_Of_Layers + 1):
+            tAvailable_N += pSoilState.Nitrate_N_Content[DOY][Layer] + pSoilState.Ammonium_N_Content[DOY][Layer]
+            
+        WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Num, DOY, 
+                                                  0, SoilLayers, 
+                                                  None, pSoilFlux, pETState, 
+                                                  pSoilState, pCS_Weather, net_irrigations,
+                                                  Irrigation_Recommendation,
+                                                  pCS_Fertilization, Today_Crop_N_Demand, 
+                                                  tAvailable_N, N_Fert_Recommended_Amount)
+        
+    #Important Notes:
+    #NOTE										
+    #If the crop nitrogen concentration (Crop N Conc) is below  the Critical Nitrogen Concentration, 										
+    #then the crop will experience nitrogen stress and reduced biomass production.										
+    #NOTE										
+    #The fertilization recommendations are made until the beginning of senescence, and given uncertainties 										
+    #in mineralization, leaching, and other factors,  the Crop N Conc may be below the Crit N Conc later in the growing										
+    #season. IN THAT CASE, YOU SHOULD SCHEDULE A FERTILIZATION AT AN APPROPRIATE TIME										
+    #OR INCREASE THE SIZE OF THE RECOMMENDED FERTILIZATION IF ANY.										
+    #NOTE										
+    #Even if no nitrogen stress is present (Ctrop N Conc below Crit N Conc), YOU MAY CONSIDER INCREASING										
+    # (REDUCING) FERTILIZATION IF A HIGHER (LOWER) CROP N  CONCENTRATION AT HARVEST IS PREFERRED.
     
     
     #SummaryOutput

@@ -34,7 +34,9 @@ class CropParameter:
     Maximum_N_Concentration_Maturity = -9999.0                                 #Maximum N concentration at maturity (kg/kg)
     Critical_N_Concentration_Maturity = -9999.0                                #Critical N concentration at maturity (kg/kg)
     Minimum_N_Concentration_Maturity = -9999.0                                 #Minimum N concentration at maturity (kg/kg)
+    Maximum_Daily_N_Uptake_Rate = -9999.0                                      #Maximum nitrogen uptake daily rate (kg/day) 'Mingliang 7/19/2025
     #Potential_N_Uptake = -9999.0                                               #Potential N Uptake (kg/ha/day)
+    
     
 class CropGrowth:
     Crop_Name = ""
@@ -83,3 +85,11 @@ class CropState:
     Seasonal_Biomass = 0.
     Seasonal_N_Uptake = 0.
     DAE_Begin_Senescence = 0
+    
+    Recommended_N_Fertilization = False #'Mingliang 7/12/2025
+    Nitrate_N_Recommended = 0. 
+    N_Fert_Recommended_DOY = dict() #(366) As Double    'XXXX OJO Mingliang 7/23/2025 This is only for output
+    N_Fert_Recommended_Amount = dict() #(366) As Double 'XXXX OJO Mingliang 7/23/2025 This is only for output
+    
+    
+    
