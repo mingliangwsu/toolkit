@@ -483,6 +483,8 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
                 SOC = pSoilModelLayer.Soil_Mass[j] * (pSoilModelLayer.Percent_Soil_Organic_Matter[j] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
                 pSoilState.Soil_Organic_Carbon[DOY][j] = SOC
                 pSoilState.Soil_Organic_Nitrogen[DOY][j] = SOC / SOC_C_N_Ratio
+            #print(f'i:{i} j:{j}:OM:{pSoilState.Soil_Organic_Carbon[DOY][j]}')
+
         Cum_J = L + 1
         
         #print(f'Cum_J:{Cum_J}')
@@ -513,11 +515,12 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
             pSoilState.Ammonium_N_Content[DOY][i] = pSoilState.Ammonium_N_Content[DOY][Number_Initialization_Layers]
             #'        Initialize soil organi carbon and nitrogen
             #'        Convert percent organic matter to soil organic carbon in kg C/m2 soil
-            pSoilModelLayer.Soil_Mass[i] = pSoilModelLayer.Soil_Mass[Number_Initialization_Layers] #pSoilModelLayer.Bulk_Density[i] * 1000. # * Layer_Thickness(i) 'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
+            pSoilModelLayer.Soil_Mass[i] = pSoilModelLayer.Bulk_Density[i] * 1000. * pSoilModelLayer.Layer_Thickness[i] #'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
             #SOC = pSoilModelLayer.Soil_Mass[i] * (pSoilModelLayer.Percent_Soil_Organic_Matter[i] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
-            SOC = pSoilModelLayer.Soil_Mass[Number_Initialization_Layers] * (pSoilModelLayer.Percent_Soil_Organic_Matter[Number_Initialization_Layers] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
+            SOC = pSoilModelLayer.Soil_Mass[i] * (pSoilModelLayer.Percent_Soil_Organic_Matter[Number_Initialization_Layers] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
             pSoilState.Soil_Organic_Carbon[DOY][i] = SOC
             pSoilState.Soil_Organic_Nitrogen[DOY][i] = SOC / SOC_C_N_Ratio
+            #print(f'i:{i} OM:{pSoilState.Soil_Organic_Carbon[DOY][i]}')
     #'Mingliang: End of new section added
     
     
