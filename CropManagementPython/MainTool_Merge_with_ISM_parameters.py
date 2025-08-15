@@ -715,7 +715,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_07232025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_08132025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -761,7 +761,9 @@ Auto_Fertilization = get_excel_boolean(InputCells,'E41')   #'Mingliang 7/18/2025
 Auto_Irrigation  = get_excel_boolean(InputCells,'G52')     #'Mingliang 7/20/2025  Should set True for estimating irrigation recommendation after TODAY.
 Seasonal_Scheduled_Fertilization = 0. #'Mingliang 7/20/2025
 
-Begin_Crop_Senescence = False    #'Mingliang 6/21/2025
+#Begin_Crop_Senescence = False    #'Mingliang 6/21/2025
+End_Nitrogen_Dilution = False    #'Mingliang 8/13/2025
+
 Potential_Biomass_At_Maturity = 0
 
 ISM_cropnames = {'Triticale': 'Triticale (for forage)','Silage Corn': 'Corn (silage)'}  #TODO
@@ -1165,7 +1167,8 @@ while Days_Elapsed < (Number_Of_Days_To_Simulate + 1):
     
     #Crop_Number = ReadInputs.CropOrder(1)
     InitialSoilProfile(DOY,pBalance,pSoilState,pSoilModelLayer)
-    Begin_Crop_Senescence = False    #'Mingliang 6/21/2025
+    #Begin_Crop_Senescence = False    #'Mingliang 6/21/2025
+    End_Nitrogen_Dilution = False
     Recommended_N_Fertilization = False
     N_Fert_Recommended_Amount = 0.
     #'Set up Crop Number 1
@@ -1189,7 +1192,7 @@ while Days_Elapsed < (Number_Of_Days_To_Simulate + 1):
             
             
             Biomass(Day_Of_The_Year, True, pCropState, CropParamaters[1], pCS_Weather, pETState) #Calculate potential biomass for the entire season
-            Begin_Crop_Senescence = ReferencePlantNConcentration(Day_Of_The_Year, pCropState, CropParamaters[1], CropGrowths[1], Begin_Crop_Senescence)
+            End_Nitrogen_Dilution = ReferencePlantNConcentration(Day_Of_The_Year, pCropState, CropParamaters[1], CropGrowths[1], End_Nitrogen_Dilution)
             Day_Of_The_Year += 1
             if Day_Of_The_Year > 365: Day_Of_The_Year = 1
             
@@ -1197,7 +1200,8 @@ while Days_Elapsed < (Number_Of_Days_To_Simulate + 1):
         if tpre_doy == 0: tpre_doy = 365
         Potential_Biomass_At_Maturity = pCropState.Cumulative_Potential_Crop_Biomass[tpre_doy]
     #'Set up Crop Number 2
-    Begin_Crop_Senescence = False    #'Mingliang 6/21/2025
+    #Begin_Crop_Senescence = False    #'Mingliang 6/21/2025
+    End_Nitrogen_Dilution = False
     if 2 in CropGrowths and DOY == CropGrowths[2].Emergence_DOY:
         Crop_Active = True
         Crop_Number = 2
@@ -1220,8 +1224,8 @@ while Days_Elapsed < (Number_Of_Days_To_Simulate + 1):
             
             Biomass(Day_Of_The_Year, True, pCropState, CropParamaters[2], 
                     pCS_Weather, pETState) #Calculate potential biomass for the entire season
-            Begin_Crop_Senescence = ReferencePlantNConcentration(Day_Of_The_Year, pCropState, 
-                                         CropParamaters[2], CropGrowths[2], Begin_Crop_Senescence)
+            End_Nitrogen_Dilution = ReferencePlantNConcentration(Day_Of_The_Year, pCropState, 
+                                         CropParamaters[2], CropGrowths[2], End_Nitrogen_Dilution)
             Day_Of_The_Year += 1
             if Day_Of_The_Year > 365: Day_Of_The_Year = 1
 
