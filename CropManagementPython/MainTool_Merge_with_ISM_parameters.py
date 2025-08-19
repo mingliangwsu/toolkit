@@ -562,7 +562,7 @@ def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs,
 
     CropSumColumns_data = {
         "Cumulative Deep Drainage(mm)": pSoilFlux.Cumulative_Deep_Drainage,
-        "Cumulative N Leaching (kg/ha)": pSoilFlux.Cumulative_N_Leaching,
+        "Cumulative N Leaching (kg/ha)": pSoilFlux.Cumulative_N_Leaching  * 10000., # 'Convert kg/m2 to kg/ha
         "Cumulative mineralization, 0.0 m - 0.3 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop[Crop_Number] * 10000, #'Convert kg/m2 to kg/ha
         "Cumulative mineralization, 0.3 m - 0.6 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop[Crop_Number] * 10000, #'Convert kg/m2 to kg/ha
         "Residual soil profile nitrate (kg/ha)": Profile_Nitrate_Content * 10000., # 'Convert kg/m2 to kg/ha,
@@ -653,7 +653,7 @@ def WriteTotalSimPeriodOutput(TotalSimPeriodOutput, RunLastDOY,
         Profile_Ammonium_Content += pSoilState.Ammonium_N_Content[Last_Simulation_DOY - 1][i]
     TotalSimPeriodRow = {
         "Cumulative Deep Drainage(mm)": pSoilFlux.Simulation_Total_Deep_Drainage,
-        "Cumulative N Leaching (kg/ha)": pSoilFlux.Simulation_Total_N_Leaching,
+        "Cumulative N Leaching (kg/ha)": pSoilFlux.Simulation_Total_N_Leaching * 10000, #  'Convert kg/m2 to kg/ha,
         "Cumulative mineralization, 0.0 m - 0.3 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_All_Days * 10000, # 'Convert kg/m2 to kg/ha,
         "Cumulative mineralization, 0.3 m - 0.6 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_All_Days * 10000, # 'Convert kg/m2 to kg/ha,
         "Residual soil profile nitrate (kg/ha)": Profile_Nitrate_Content * 10000, #  'Convert kg/m2 to kg/ha
