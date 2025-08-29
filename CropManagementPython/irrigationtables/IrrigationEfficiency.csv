@@ -1,0 +1,23 @@
+Irrigation_System,Irrigation_Efficiency_Ealq,Primary_Destination_of_Water Losses,Irrigation_Efficiency_Range_%, Fraction_Losses_to_DP,Fraction_Losses_ to_WDE,Fraction_Losses_to_RO,Fraction_Short_Term_Losses,Fraction_Forever_Losses
+Pivot_Linear MESA,79,WDE,75-90,0.27,0.73,0,0.21,0.15
+Pivot_Linear LEPA,91,WDE,80-97,1.00,0.00,0,0.09,0.00
+Pivot_Linear LESA,92,WDE,80-97,0.62,0.38,0,0.08,0.03
+Pivot_Linear Top_of_Pipe,56,WDE,50-70,0.09,0.91,0,0.44,0.40
+Hand move,68,WDE,60-85,0.16,0.84,0,0.32,0.27
+Wheel Line,68,WDE,60-85,0.16,0.84,0,0.32,0.27
+Microsprinkler,75,WDE,80-90,0.27,0.73,0,0.25,0.18
+Undertree Orchard,77,WDE,75-93,0.30,0.70,0,0.23,0.16
+Solid Set Sprinklers,67,WDE,70-85,0.26,0.74,0,0.33,0.24
+Big Gun Traveler,59,WDE,50-70,0.16,0.84,0,0.41,0.35
+Furrow,62,DP-RO,30-90,0.50,0.05,0.45,0.38,0.02
+Graded Furrow,73,DP-RO,30-90,0.50,0.05,0.45,0.27,0.01
+Furrow with Surge,75,DP-RO,60-90,0.50,0.05,0.45,0.25,0.01
+Furrow with tailwater reuse,80,DP-RO,60-90,1.00,0,0,0.20,0.00
+Basin,75,DP-RO,40-95,1.00,0,0,0.25,0.00
+Border,65,DP-RO,40-90,0.50,0.05,0.45,0.35,0.02
+Contour Border,73,DP-RO,55-80,0.50,0.05,0.45,0.27,0.01
+Corrugation,50,DP-RO,40-75,0.50,0.05,0.45,0.50,0.03
+Wild Flood,35,DP-RO,25-85,0.50,0.05,0.45,0.65,0.03
+Subsurface drip,92,DP,65-98,1.00,0,0,0.08,0.00
+Surface Drip,89,DP,65-96,1.00,0,0,0.11,0.00
+Mobile Drip Irrigation,97,DP,65-99,1.00,0,0,0.03,0.00
