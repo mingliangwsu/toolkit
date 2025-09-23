@@ -22,6 +22,7 @@ from accessssurgo_functions import *
 from Balances import *
 from AutoIrrigation import *
 from OrganicCandN import *
+import os
 
 import sys
 
@@ -155,6 +156,9 @@ def ReadSoilHorizonParamegters(Cells,pSoilHorizen):
             
         #pSoilHorizen.Soil_Organic_Carbon[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
         pSoilHorizen.Percent_Soil_Organic_Matter[i] = float(Cells.iloc[22 + i - 1, 9 - 1])
+    #09232025LML making sure the overal soil depth goes to 2 meters
+    if total_horizon_depth < 2.:
+        pSoilHorizen.Horizon_Thickness[pSoilHorizen.Number_Of_Horizons] += 2. - total_horizon_depth
         
     #depth_deficit = MAX_Number_Model_Layers * Thickness_Model_Layers - total_horizon_depth #05192025LML
     #if depth_deficit > 0.: #05192025LML in case total horizon depth less than model required depth, extent the bottom horizon
@@ -198,6 +202,9 @@ def GetSoilHorizonParamegtersFromSSURGO(df_SSURGO,pSoilHorizen,bNotUseFC_PWP_Sat
         else:
             pSoilHorizen.Bulk_Dens[i] = float(df_SSURGO.loc[i-1, 'dbthirdbar_r'])
 
+    #09232025LML making sure the overal soil depth goes to 2 meters
+    if total_horizon_depth < 2.:
+        pSoilHorizen.Horizon_Thickness[pSoilHorizen.Number_Of_Horizons] += 2. - total_horizon_depth
     #depth_deficit = MAX_Number_Model_Layers * Thickness_Model_Layers - total_horizon_depth #05192025LML
     #print(f'depth_deficit:{depth_deficit} total_horizon_depth:{total_horizon_depth}')
     #if depth_deficit > 0.: #05192025LML in case total horizon depth less than model required depth, extent the bottom horizon
@@ -388,45 +395,40 @@ def GetAgWeatherNetDailyWeather(stationid,AnemomH_m,styear,stdoy,edyear, eddoy,p
         #exit()
     return good_data
     
-def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLayer,pSoilHorizen,pSoilFlux):
+def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLayer,pSoilHorizen,pSoilFlux,bUseDefaultInitSoil):
     #NUnit: ppm ot kgN_ha
+    DOY = Run_First_Doy
     InitSoilState(pSoilState)
-    start_row_idx = 7 - 1
-    end_row_idx = 16 - 1
-    Number_Initial_Conditions_Layers = int(get_excel_value(Cells,'B3'))
-    if Number_Initial_Conditions_Layers <= 0 or pd.isna(Number_Initial_Conditions_Layers): 
-        Number_Initial_Conditions_Layers = 10 #06042025LML initialize a big number
-    #Thickness_Model_Layers = 0.1
-    
+    Number_Initial_Conditions_Layers = 0
+    valid_Number_Initial_Conditions_Layers = 0
     Thickness = dict()
     Number_Of_Sublayers = dict()
     Water = dict()
     Nitrate = dict()
     Ammonium = dict()
-    
-    DOY = Run_First_Doy
-    
-    #NUnit: ppm ot kgN_ha
-    if 'kg' in get_excel_value(Cells,'D6').lower() and 'ha' in get_excel_value(Cells,'D6').lower():
-        NUnit = 'kgN_ha'
-    elif 'ppm' in get_excel_value(Cells,'D6').lower():
-        NUnit = 'ppm'
-    else:
-        NUnit = 'ppm'  #default
-
-    #06042025LML added check thickness
-    valid_Number_Initial_Conditions_Layers = 0
-    
-    for i in range(1, Number_Initial_Conditions_Layers + 1):
-        thickness = float(Cells.iloc[i + 6 - 1, 2 - 1])
-        if not pd.isna(thickness) and thickness > 0:
-            valid_Number_Initial_Conditions_Layers += 1
-            Thickness[i] = round(float(Cells.iloc[i + 6 - 1, 2 - 1]),1)
-            Number_Of_Sublayers[i] = round(Thickness[i] / Thickness_Model_Layers)
-            #print(f'i:{i} Number_Of_Sublayers:{Number_Of_Sublayers[i]}')
-            Water[i] = float(Cells.iloc[i + 6 - 1, 3 - 1])
-            Nitrate[i] = float(Cells.iloc[i + 6 - 1, 4 - 1]) 
-            Ammonium[i] = float(Cells.iloc[i + 6 - 1, 5 - 1]) 
+    if not bUseDefaultInitSoil:
+        end_row_idx = 16 - 1
+        Number_Initial_Conditions_Layers = int(get_excel_value(Cells,'B3'))
+        if Number_Initial_Conditions_Layers <= 0 or pd.isna(Number_Initial_Conditions_Layers): 
+            Number_Initial_Conditions_Layers = 10 #06042025LML initialize a big number
+        #Thickness_Model_Layers = 0.1
+        #NUnit: ppm ot kgN_ha
+        if 'kg' in get_excel_value(Cells,'D6').lower() and 'ha' in get_excel_value(Cells,'D6').lower():
+            NUnit = 'kgN_ha'
+        elif 'ppm' in get_excel_value(Cells,'D6').lower():
+            NUnit = 'ppm'
+        else:
+            NUnit = 'ppm'  #default
+        for i in range(1, Number_Initial_Conditions_Layers + 1):
+            thickness = float(Cells.iloc[i + 6 - 1, 2 - 1])
+            if not pd.isna(thickness) and thickness > 0:
+                valid_Number_Initial_Conditions_Layers += 1
+                Thickness[i] = round(float(Cells.iloc[i + 6 - 1, 2 - 1]),1)
+                Number_Of_Sublayers[i] = round(Thickness[i] / Thickness_Model_Layers)
+                #print(f'i:{i} Number_Of_Sublayers:{Number_Of_Sublayers[i]}')
+                Water[i] = float(Cells.iloc[i + 6 - 1, 3 - 1])
+                Nitrate[i] = float(Cells.iloc[i + 6 - 1, 4 - 1]) 
+                Ammonium[i] = float(Cells.iloc[i + 6 - 1, 5 - 1]) 
             
     #print(f'valid_Number_Initial_Conditions_Layers: {valid_Number_Initial_Conditions_Layers} Number_Initial_Conditions_Layers:{Number_Initial_Conditions_Layers}')
           
@@ -438,8 +440,13 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
             Thickness[i] = 0.2
             Number_Of_Sublayers[i] = round(Thickness[i] / Thickness_Model_Layers)
             Water[i] = -9999.
-            Nitrate[i] = -9999.
+            if i < 5:
+                Nitrate[i] = 20.  #kg/ha
+            else:
+                Nitrate[i] = 0.  #kg/ha
+            NUnit = 'kgN_ha'
             Ammonium[i] = -9999.
+            
             
     #print(f'adjusted valid_Number_Initial_Conditions_Layers: {valid_Number_Initial_Conditions_Layers} Number_Initial_Conditions_Layers:{Number_Initial_Conditions_Layers}')
 
@@ -452,7 +459,7 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
         for j in range(k, L + 1):
             pSoilModelLayer.Layer_Thickness[j] = Thickness[i] / Number_Of_Sublayers[i]
             if j <= pSoilModelLayer.Number_Model_Layers:
-                if Water[i] >= 0 and not pd.isna(Water[i]):
+                if Water[i] > 0 and not pd.isna(Water[i]):
                     pSoilState.Water_Content[DOY][j] = min(pSoilModelLayer.FC_Water_Content[j], Water[i])
                     pSoilState.Water_Content[DOY][j] = max(pSoilModelLayer.PWP_Water_Content[j], pSoilState.Water_Content[DOY][j]) #06132025LML incase user set zero
                 else:
@@ -462,21 +469,26 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
                 #pSoilState.Soil_Water_Potential[j] = WP(pSoilModelLayer.Saturation_Water_Content[i], Water[i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
                 pSoilState.Soil_Water_Potential[DOY][j] = WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][j], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
                 
-                if Nitrate[i] >= 0 and not pd.isna(Nitrate[i]):
+                if Nitrate[i] > 0 and not pd.isna(Nitrate[i]):
                     if NUnit == 'kgN_ha':
                         pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / 10000. / Number_Of_Sublayers[i]    #'Convert kg/ha to kg/m2
                     elif NUnit == 'ppm':
                         pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] * pSoilModelLayer.Bulk_Density[j] * pSoilModelLayer.Layer_Thickness[j] / 1000    #'Convert ppm to kg/m2
                 else:
-                    pSoilState.Nitrate_N_Content[DOY][j] = 0. #10 / 10000   #'Convert kg/ha to kg/m2         'Mingliang 6/17/2025
-                    
-                if Ammonium[i] >= 0 and not pd.isna(Ammonium[i]):
+                    if bUseDefaultInitSoil and j <= 8:
+                        pSoilState.Nitrate_N_Content[DOY][j] = Nitrate[i] / 10000. / Number_Of_Sublayers[i]
+                    elif not bUseDefaultInitSoil and j <= 8: #in case user input zero for upper layers
+                        pSoilState.Nitrate_N_Content[DOY][j] = 0.001 #kg/m2
+                    else:
+                        pSoilState.Nitrate_N_Content[DOY][j] = 0.
+                        
+                if Ammonium[i] > 0 and not pd.isna(Ammonium[i]):
                     if NUnit == 'kgN_ha':
                         pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] / 10000. / Number_Of_Sublayers[i]  #'Convert kg/ha to kg/m2
                     elif NUnit == 'ppm':
                         pSoilState.Ammonium_N_Content[DOY][j] = Ammonium[i] * pSoilModelLayer.Bulk_Density[j] * pSoilModelLayer.Layer_Thickness[j] / 1000. #'Convert ppm to kg/m2
                 else:
-                    pSoilState.Ammonium_N_Content[DOY][j] = 0 #'Convert kg/ha to kg/m2                  'Mingliang 6/17/2025
+                    pSoilState.Ammonium_N_Content[DOY][j] = 0. #'Convert kg/ha to kg/m2                  'Mingliang 6/17/2025
                     
                 #print(f'Num_layers: {pSoilModelLayer.Number_Model_Layers} NUnit:{NUnit} i:{i} j:{j} Bulk_Density:{pSoilModelLayer.Bulk_Density[j]} WC:{pSoilState.Water_Content[DOY][j]} Nitrate_N_Content:{pSoilState.Nitrate_N_Content[DOY][j]} Ammonium:{pSoilState.Ammonium_N_Content[DOY][j]}')
                 pSoilModelLayer.Soil_Mass[j] = pSoilModelLayer.Bulk_Density[j] * 1000 * pSoilModelLayer.Layer_Thickness[j] #'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
@@ -504,15 +516,20 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
     NML = pSoilModelLayer.Number_Model_Layers #'Mingliang 4/15/2025 'This is the total number of simulation model layers 'Mingliang 4/15/2025
     for i in range(Number_Initialization_Layers + 1, NML + 1):
             pSoilModelLayer.Layer_Thickness[i] = pSoilModelLayer.Layer_Thickness[Number_Initialization_Layers]
-            pSoilState.Water_Content[DOY][i] = pSoilState.Water_Content[DOY][Number_Initialization_Layers]
-            pSoilState.Water_Filled_Porosity[DOY][i] = pSoilState.Water_Filled_Porosity[DOY][Number_Initialization_Layers] #pSoilState.Water_Content[DOY][i] / pSoilModelLayer.Saturation_Water_Content[i]
-            #'Mingliang Soil water potential was changed to a two-dimensional array
-            #'        Soil_Water_Potential(i) = WP(Saturation_Water_Content(i), Water_Content(DOY, i), Air_Entry_Potential(i), B_value(i))
             
-            pSoilState.Soil_Water_Potential[DOY][i] = pSoilState.Soil_Water_Potential[DOY][Number_Initialization_Layers] #WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
+            #09232025LML updated the following section
+            #pSoilState.Water_Content[DOY][i] = pSoilState.Water_Content[DOY][Number_Initialization_Layers]
+            #pSoilState.Water_Filled_Porosity[DOY][i] = pSoilState.Water_Filled_Porosity[DOY][Number_Initialization_Layers] #pSoilState.Water_Content[DOY][i] / pSoilModelLayer.Saturation_Water_Content[i]
+            #pSoilState.Soil_Water_Potential[DOY][i] = pSoilState.Soil_Water_Potential[DOY][Number_Initialization_Layers] #WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
+            
+            pSoilState.Water_Content[DOY][i] = pSoilModelLayer.FC_Water_Content[i] * 0.7 + pSoilModelLayer.PWP_Water_Content[i] * 0.3
+            pSoilState.Water_Filled_Porosity[DOY][i] = pSoilState.Water_Content[DOY][i] / pSoilModelLayer.Saturation_Water_Content[i]
+            pSoilState.Soil_Water_Potential[DOY][i] = WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
 
-            pSoilState.Nitrate_N_Content[DOY][i] = pSoilState.Nitrate_N_Content[DOY][Number_Initialization_Layers]
-            pSoilState.Ammonium_N_Content[DOY][i] = pSoilState.Ammonium_N_Content[DOY][Number_Initialization_Layers]
+            
+
+            pSoilState.Nitrate_N_Content[DOY][i] = 0. #09192025LML pSoilState.Nitrate_N_Content[DOY][Number_Initialization_Layers]
+            pSoilState.Ammonium_N_Content[DOY][i] = 0. #09192025LML pSoilState.Ammonium_N_Content[DOY][Number_Initialization_Layers]
             #'        Initialize soil organi carbon and nitrogen
             #'        Convert percent organic matter to soil organic carbon in kg C/m2 soil
             pSoilModelLayer.Soil_Mass[i] = pSoilModelLayer.Bulk_Density[i] * 1000. * pSoilModelLayer.Layer_Thickness[i] #'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
@@ -715,7 +732,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_08132025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_09192025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -728,11 +745,20 @@ budget_output_excel_csv = 'BudgetOutput.csv'
 #Soil properties & Crop growth parameters
 InputCells = pd.read_csv(f'{data_path}/{fieldinput_from_excel_csv}',header=None)
 cropCells = pd.read_csv(f'{data_path}/{crop_from_excel_csv}',header=None)
-SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
 
+bUseDefaultInitSoil = False                                                     #09192025LML Check user input initial soil information or using the default value
+
+SoilInitCells = pd.DataFrame()
+if not bUseDefaultInitSoil and os.path.exists(f'{data_path}/{soil_initial_excel_csv}'):
+    SoilInitCells = pd.read_csv(f'{data_path}/{soil_initial_excel_csv}',header=None)
+else:
+    print("Use default soil initial condition.")
+    bUseDefaultInitSoil = True
+    
 #user option
 soil_propertities_from_SSURGO = False
 bNotUseFC_PWP_Sat_WC = True                                                    #06042025LML If True, use model to estimate FC, PWP,  Sat WC, and bulkdensity; Otherwise, use user inputs or from soil database
+
 
 crop_growth_parameter_from_ISM = False
 weather_from_AgWeatherNet = False
@@ -1122,7 +1148,7 @@ else:
     
 #ReadSoilInitial(Run_First_DOY,SoilInitCells,pSoilState,pSoilModelLayer)
 ReadSoilInitial(Run_First_Doy, Run_Last_Doy, SoilInitCells, pSoilState,
-                pSoilModelLayer, pSoilHorizen, pSoilFlux)
+                pSoilModelLayer, pSoilHorizen, pSoilFlux, bUseDefaultInitSoil)
 
 #05222025LML moved here
 pSoilState.Auto_Irrigation = False
