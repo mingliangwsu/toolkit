@@ -342,16 +342,16 @@ def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer,bNotUseFC_
         Silt = pSoilHorizons.Silt[i]
         pSoilHorizons.AE_Pot[i] = AE(Sand, Clay)
         pSoilHorizons.B_Val[i] = B(Sand, Clay)
-        if i not in pSoilHorizons.FC_WP or pSoilHorizons.FC_WP[i] <= 0 or pd.isna(pSoilHorizons.FC_WP[i]) or bNotUseFC_PWP_Sat_WC:
+        if i not in pSoilHorizons.FC_WP or pd.isna(pSoilHorizons.FC_WP[i]) or pSoilHorizons.FC_WP[i] <= 0 or bNotUseFC_PWP_Sat_WC:
             pSoilHorizons.FC_WP[i] = WPFC(Clay, Silt)
         pSoilHorizons.PWP_WP[i] = -1500
-        if i not in pSoilHorizons.Bulk_Dens or pSoilHorizons.Bulk_Dens[i] <= 0 or pd.isna(pSoilHorizons.Bulk_Dens[i]) or bNotUseFC_PWP_Sat_WC:
+        if i not in pSoilHorizons.Bulk_Dens or pd.isna(pSoilHorizons.Bulk_Dens[i]) or pSoilHorizons.Bulk_Dens[i] <= 0 or bNotUseFC_PWP_Sat_WC:
             pSoilHorizons.Bulk_Dens[i] = BD(Sand, Clay)
-        if i not in pSoilHorizons.Sat_WC or pSoilHorizons.Sat_WC[i] <= 0 or pd.isna(pSoilHorizons.Sat_WC[i]) or bNotUseFC_PWP_Sat_WC:
+        if i not in pSoilHorizons.Sat_WC or pd.isna(pSoilHorizons.Sat_WC[i]) or pSoilHorizons.Sat_WC[i] <= 0 or bNotUseFC_PWP_Sat_WC:
             pSoilHorizons.Sat_WC[i] = WS(Sand, Clay)
-        if i not in pSoilHorizons.FC_WC or pSoilHorizons.FC_WC[i] <= 0 or pd.isna(pSoilHorizons.FC_WC[i]) or bNotUseFC_PWP_Sat_WC: 
+        if i not in pSoilHorizons.FC_WC or pd.isna(pSoilHorizons.FC_WC[i]) or pSoilHorizons.FC_WC[i] <= 0 or bNotUseFC_PWP_Sat_WC: 
             pSoilHorizons.FC_WC[i] = WC(pSoilHorizons.Sat_WC[i], pSoilHorizons.FC_WP[i], pSoilHorizons.AE_Pot[i], pSoilHorizons.B_Val[i])
-        if i not in pSoilHorizons.PWP_WC or pSoilHorizons.PWP_WC[i] <= 0 or pd.isna(pSoilHorizons.PWP_WC[i]) or bNotUseFC_PWP_Sat_WC: 
+        if i not in pSoilHorizons.PWP_WC or pd.isna(pSoilHorizons.PWP_WC[i]) or pSoilHorizons.PWP_WC[i] <= 0 or bNotUseFC_PWP_Sat_WC: 
             pSoilHorizons.PWP_WC[i] = WC(pSoilHorizons.Sat_WC[i], pSoilHorizons.PWP_WP[i], pSoilHorizons.AE_Pot[i], pSoilHorizons.B_Val[i])
         pSoilHorizons.Number_Of_Sublayers[i] = round(pSoilHorizons.Horizon_Thickness[i] / Thickness_Model_Layers)
         
@@ -380,6 +380,10 @@ def CalculateHydraulicProperties(N_Horz,pSoilHorizons,pSoilModelLayer,bNotUseFC_
             pSoilModelLayer.Percent_Soil_Organic_Matter[j] = pSoilHorizons.Percent_Soil_Organic_Matter[i]
         Cum_J = L + 1
     pSoilModelLayer.Number_Model_Layers = Cum_J - 1
+    
+    for i in range(1,pSoilModelLayer.Number_Model_Layers + 1):
+        pSoilModelLayer.Layer_Thickness[i] = Thickness_Model_Layers #m  The thickness of all model layers is 0.1 m   'MINGLIANG 11/10/2025 
+    
     #print(f'pSoilModelLayer.Number_Model_Layers:{pSoilModelLayer.Number_Model_Layers}')
     #pSoilModelLayer.Number_Model_Layers = min(MAX_Number_Model_Layers, Cum_J - 1) #05192025LML limit total soil layers to MAX_Number_Model_Layers
 
