@@ -115,7 +115,8 @@ class SoilFlux:
     
     Fertilization_Rate = dict() #(366) As Double
     N_Leaching = dict() #(366) As Double
-    N_Leaching_Accumulated = dict() #(366) As Double
+    #N_Leaching_Accumulated = dict() #(366) As Double
+    N_Leaching_Accumulated_Crop = dict() #(366) As Double
     Deep_Drainage = dict() #(366) As Double
     Chemical_Balance = dict() #(366) As Double
     Water_Balance = dict() #(366) As Double
@@ -136,11 +137,17 @@ class SoilFlux:
     Cumulative_Mineralization_Next_Three_Layers_Crop = dict()
     Cumulative_Mineralization_All_Layers = 0.0    #'Mingliang 6/21/2025
     
-    Cumulative_Deep_Drainage = 0.
-    Cumulative_N_Leaching = 0. #kg/m2
+    #Cumulative_Deep_Drainage = 0.
+    Cumulative_Deep_Drainage_Crop = dict()
+    
+    #Cumulative_N_Leaching = 0. #kg/m2
+    Cumulative_N_Leaching_Crop = dict()
+    
     Sum_N_Fertilization = 0.
-    Cumulative_Irrigation = 0.                                                 #only account when crop is active
-    Cumulative_Fertilization = 0.
+    #Cumulative_Irrigation = 0.                                                 #only account when crop is active
+    Cumulative_Irrigation_Crop = dict()
+    #Cumulative_Fertilization = 0.
+    Cumulative_Fertilization_Crop = dict()
     
     Simulation_Total_N_Leaching = 0.
     Simulation_Total_Deep_Drainage = 0.
@@ -236,7 +243,7 @@ def InitSoilFlux(pSoilFlux):
         
         pSoilFlux.Fertilization_Rate[i] = 0.
         pSoilFlux.N_Leaching[i] = 0.
-        pSoilFlux.N_Leaching_Accumulated[i] = 0.
+        #pSoilFlux.N_Leaching_Accumulated[i] = 0.
         pSoilFlux.Deep_Drainage[i] = 0.
         pSoilFlux.Chemical_Balance[i] = 0.
         pSoilFlux.Water_Balance[i] = 0.
@@ -244,6 +251,11 @@ def InitSoilFlux(pSoilFlux):
         pSoilFlux.Layer_Mineralization[i] = dict()
         for j in range(1,21):
             pSoilFlux.Layer_Mineralization[i][j] = 0.
+            
+        pSoilFlux.N_Leaching_Accumulated_Crop[i] = dict()
+        for k in range(1,3):
+            pSoilFlux.N_Leaching_Accumulated_Crop[i][k] = 0.
+            
     pSoilFlux.Layer_Oxidized_SOM_C_Transfer_Back_To_SOM = 0.
     pSoilFlux.Layer_Oxidized_SOM_N_Transferred_To_Ammonium = 0.
     
@@ -254,6 +266,10 @@ def InitSoilFlux(pSoilFlux):
     for i in range(1,3):
         pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop[i] = 0.
         pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop[i] = 0.
+        pSoilFlux.Cumulative_Deep_Drainage_Crop[i] = 0.
+        pSoilFlux.Cumulative_N_Leaching_Crop[i] = 0.
+        pSoilFlux.Cumulative_Irrigation_Crop[i] = 0.
+        pSoilFlux.Cumulative_Fertilization_Crop[i] = 0.
 
     
     pSoilFlux.Cumulative_Deep_Drainage = 0.
@@ -400,7 +416,7 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
                        Prec, pCS_Fertilization, Nitrate_Fraction, 
                        AutoIrrigations, pSoilFlux, CropActive, pETState, 
                        Water_Depth_To_Refill_fc, Auto_Irrigation,
-                       Recommended_N_Fertilization, Nitrate_N_Recommended):
+                       Recommended_N_Fertilization, Nitrate_N_Recommended, Crop_Number):
     #'This subroutine only transport nitrate N. Ammonium N only moves down the soil when transformed to nitrate
     Chem_Mass = dict()
     WC = dict()
@@ -607,11 +623,11 @@ def WaterAndNTransport(DOY, pSoilModelLayer, pSoilState, net_irrigations, WaterN
     pSoilFlux.Deep_Drainage[DOY] = Cumulative_Pulse_Deep_Drainage  #'mm
     
     if CropActive:
-       pSoilFlux.Cumulative_Deep_Drainage += Cumulative_Pulse_Deep_Drainage #'mm
-       pSoilFlux.Cumulative_N_Leaching += Cumulative_Pulse_N_Leaching 
-       pSoilFlux.Cumulative_Irrigation += NID
-       pSoilFlux.Cumulative_Fertilization += Nitrate_N_Fertilization + Ammonium_N_Fertilization
-       pSoilFlux.N_Leaching_Accumulated[DOY] = pSoilFlux.N_Leaching_Accumulated[Adj_DOY] + Cumulative_Pulse_N_Leaching
+       pSoilFlux.Cumulative_Deep_Drainage_Crop[Crop_Number] += Cumulative_Pulse_Deep_Drainage #'mm
+       pSoilFlux.Cumulative_N_Leaching_Crop[Crop_Number] += Cumulative_Pulse_N_Leaching 
+       pSoilFlux.Cumulative_Irrigation_Crop[Crop_Number] += NID
+       pSoilFlux.Cumulative_Fertilization_Crop[Crop_Number] += Nitrate_N_Fertilization + Ammonium_N_Fertilization
+       pSoilFlux.N_Leaching_Accumulated_Crop[DOY][Crop_Number] = pSoilFlux.N_Leaching_Accumulated_Crop[Adj_DOY][Crop_Number] + Cumulative_Pulse_N_Leaching
     
     #print(f'N_Leaching_Accumulated(kg/ha):{pSoilFlux.N_Leaching_Accumulated[DOY]}')
     

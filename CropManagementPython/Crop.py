@@ -403,7 +403,7 @@ def FertilizerRecommendation(DOY, pCropState, pCropParameter,
     #'Mingliang 7/23/2025 End of fertilization recommendation
     return pCropState.Recommended_N_Fertilization, pCropState.N_Fert_Recommended_Amount[DOY]
 
-def InitializeCrop(DOY,pCropState,pSoilFlux,pCropParameter,pETState):
+def InitializeCrop(DOY,pCropState,pSoilFlux,pCropParameter,pETState,Crop_Number):
     pCropState.Green_Canopy_Cover[DOY] = pCropParameter.Initial_Green_Canopy_Cover
     pCropState.Total_Canopy_Cover[DOY] = pCropParameter.Initial_Green_Canopy_Cover
     Depth_Of_Seed = pCropParameter.Seeding_Depth
@@ -415,10 +415,10 @@ def InitializeCrop(DOY,pCropState,pSoilFlux,pCropParameter,pETState):
     pCropState.Crop_N_Mass[DOY - 1] = pCropState.Cumulative_Crop_Biomass[DOY - 1] * pCropParameter.Maximum_N_Concentration_Emergence
     pCropState.Crop_N_Concentration[DOY - 1] = pCropParameter.Maximum_N_Concentration_Emergence #'Mingliang 8/13/2025
     pCropState.Cumulative_N_Uptake[DOY] = 0.
-    pSoilFlux.Cumulative_Irrigation = 0.
-    pSoilFlux.CumulativeFertilization = 0.
-    pSoilFlux.CumulativeDeepDrainage = 0.
-    pSoilFlux.CumulativeNLeaching = 0.
+    pSoilFlux.Cumulative_Irrigation_Crop[Crop_Number] = 0.
+    pSoilFlux.Cumulative_Fertilization_Crop[Crop_Number] = 0.
+    pSoilFlux.Cumulative_Deep_Drainage_Crop[Crop_Number] = 0.
+    pSoilFlux.Cumulative_N_Leaching_Crop[Crop_Number] = 0.
     pETState.Crop_Soil_Water_Evaporation = 0.
     pETState.Total_Transpiration = 0.
     pCropState.Seasonal_N_Uptake = 0.

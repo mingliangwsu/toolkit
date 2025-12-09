@@ -519,31 +519,23 @@ def ReadSoilInitial(Run_First_Doy, Run_Last_Doy, Cells,pSoilState,pSoilModelLaye
         Number_Initialization_Layers = Cum_J - 1 #'Mingliang 4/15/2025
         #NML = pSoilModelLayer.Number_Model_Layers #'Mingliang 4/15/2025 'This is the total number of simulation model layers 'Mingliang 4/15/2025
         #Extend initial conditions below last layer when the soil depth is greater than the sampling depth
-        copy_nitrate_to_layer = 5
-        if bUseVB: copy_nitrate_to_layer = 20 
+        copy_nitrate_to_layer = 5  #12052025LML-COS use same approach
+        
         if NML > Number_Initialization_Layers:
             for i in range(Number_Initialization_Layers + 1, NML + 1):
                     #pSoilModelLayer.Layer_Thickness[i] = pSoilModelLayer.Layer_Thickness[Number_Initialization_Layers]
                     
-                    #11122025LML suggested
-                    if not bUseVB:
-                        pSoilState.Water_Filled_Porosity[DOY][i] = pSoilState.Water_Filled_Porosity[DOY][Number_Initialization_Layers] 
-                        pSoilState.Water_Content[DOY][i] = pSoilState.Water_Filled_Porosity[DOY][i] * pSoilModelLayer.Saturation_Water_Content[i]   # pSoilModelLayer.FC_Water_Content[i] * 0.7 + pSoilModelLayer.PWP_Water_Content[i] * 0.3
-                        pSoilState.Soil_Water_Potential[DOY][i] = WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
-                    else:
-                        #11252025: LML WARNNING! The soil properties might be different so the following properties might be problematic! (kept save with VB version)
-                        pSoilState.Water_Content[DOY][i] = pSoilState.Water_Content[DOY][Number_Initialization_Layers]
-                        pSoilState.Water_Filled_Porosity[DOY][i] = pSoilState.Water_Filled_Porosity[DOY][Number_Initialization_Layers]
-                        pSoilState.Soil_Water_Potential[DOY][i] = pSoilState.Soil_Water_Potential[DOY][Number_Initialization_Layers]
-                    
+                    #12052025LML-COS used same approach
+                    pSoilState.Water_Content[DOY][i] = pSoilModelLayer.FC_Water_Content[i] * 0.8 + pSoilModelLayer.PWP_Water_Content[i] * 0.2
+                    pSoilState.Water_Filled_Porosity[DOY][i] = pSoilState.Water_Content[DOY][i] / pSoilModelLayer.Saturation_Water_Content[i]
+                    pSoilState.Soil_Water_Potential[DOY][i] = WP(pSoilModelLayer.Saturation_Water_Content[i], pSoilState.Water_Content[DOY][i], pSoilModelLayer.Air_Entry_Potential[i], pSoilModelLayer.B_value[i])
                     
                     if bUsedForFirstday:
-                        if i > copy_nitrate_to_layer: #consistancy with COS WARNING!!! 11252025LML suggest set 5, i.e. if deepter than 50 cm, set zero if there is no initial value are set up.
+                        pSoilState.Ammonium_N_Content[DOY][i] = 0. 
+                        if i > copy_nitrate_to_layer: 
                             pSoilState.Nitrate_N_Content[DOY][i] = 0. 
-                            pSoilState.Ammonium_N_Content[DOY][i] = 0. 
                         else:
-                            pSoilState.Nitrate_N_Content[DOY][i] = pSoilState.Nitrate_N_Content[DOY][Number_Initialization_Layers]
-                            pSoilState.Ammonium_N_Content[DOY][i] = pSoilState.Ammonium_N_Content[DOY][Number_Initialization_Layers]
+                            pSoilState.Nitrate_N_Content[DOY][i] = 0.002 #'kg/m2
                     
                     pSoilModelLayer.Soil_Mass[i] = pSoilModelLayer.Bulk_Density[i] * 1000. * pSoilModelLayer.Layer_Thickness[i] #'kg/m2 in each soil layer. Bulk density converted from Mg/m3 to kg/m3
                     SOC = pSoilModelLayer.Soil_Mass[i] * (pSoilModelLayer.Percent_Soil_Organic_Matter[Number_Initialization_Layers] / 100.) * Carbon_Fraction_In_SOM #'kg/m2
@@ -575,14 +567,14 @@ def WriteCropSummaryOutput(Crop_Number, DOY, CropSumOutputs,
         Profile_Ammonium_Content += pSoilState.Ammonium_N_Content[DOY][i]
 
     CropSumColumns_data = {
-        "Cumulative Deep Drainage(mm)": pSoilFlux.Cumulative_Deep_Drainage,
-        "Cumulative N Leaching (kg/ha)": pSoilFlux.Cumulative_N_Leaching  * 10000., # 'Convert kg/m2 to kg/ha
+        "Cumulative Deep Drainage(mm)": pSoilFlux.Cumulative_Deep_Drainage_Crop[Crop_Number],
+        "Cumulative N Leaching (kg/ha)": pSoilFlux.Cumulative_N_Leaching_Crop[Crop_Number] * 10000., # 'Convert kg/m2 to kg/ha
         "Cumulative mineralization, 0.0 m - 0.3 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop[Crop_Number] * 10000, #'Convert kg/m2 to kg/ha
         "Cumulative mineralization, 0.3 m - 0.6 m soil layer (kg/ha)": pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_Crop[Crop_Number] * 10000, #'Convert kg/m2 to kg/ha
         "Residual soil profile nitrate (kg/ha)": Profile_Nitrate_Content * 10000., # 'Convert kg/m2 to kg/ha,
         "Residual soil profile ammonium (kg/ha)": Profile_Ammonium_Content * 10000, # 'Convert kg/m2 to kg/ha,
-        "Cumulative irrigation (mm)": pSoilFlux.Cumulative_Irrigation,
-        "Cumulative N fertilization (kg/ha)": pSoilFlux.Cumulative_Fertilization * 10000, #'Convert kg/m2 to kg/ha,
+        "Cumulative irrigation (mm)": pSoilFlux.Cumulative_Irrigation_Crop[Crop_Number],
+        "Cumulative N fertilization (kg/ha)": pSoilFlux.Cumulative_Fertilization_Crop[Crop_Number] * 10000, #'Convert kg/m2 to kg/ha,
         "Seasonal Transpiration (mm)": pETState.Total_Transpiration,
         "Seasonal Soil Water Evaporation (mm)": pETState.Crop_Soil_Water_Evaporation,
         "Seasonal N Uptake (kg/ha)": pCropState.Seasonal_N_Uptake * 10000, # 'Convert kg/m2 to kg/ha ,
@@ -633,7 +625,7 @@ def WriteCropOutput(Crop_Number, DOY, DAE, CropOutputs,
         "N Mass Top 50 cm (kg/ha)": pSoilState.N_Mass_Top50cm[DOY],
         "N Mass Mid 50 cm (kg/ha)": pSoilState.N_Mass_Mid50cm[DOY],
         "N Mass bottom 50 cm (kg/ha)": pSoilState.N_Mass_Bottom50cm[DOY],
-        "N Leaching (kg/ha)":pSoilFlux.N_Leaching_Accumulated[DOY] * 10000, #'Convert kg/m2 to kg/ha 'NEW Mingliang
+        "N Leaching (kg/ha)":pSoilFlux.N_Leaching_Accumulated_Crop[DOY][Crop_Number] * 10000, #'Convert kg/m2 to kg/ha 'NEW Mingliang
         "Soil N Mass down to 150 cm (kg/ha)": pSoilState.N_Mass_Top50cm[DOY] + pSoilState.N_Mass_Mid50cm[DOY] + pSoilState.N_Mass_Bottom50cm[DOY],
         "N Uptake Rate (kg/ha/day)": (pCropState.Cumulative_N_Uptake[DOY] - preday_Cumulative_N_Uptake) * 10000 #'Convert kg/m2 to kg/ha
     }
@@ -729,7 +721,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_11192025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_12052025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -756,10 +748,8 @@ else:
 soil_propertities_from_SSURGO = False
 bNotUseFC_PWP_Sat_WC = True                                                    #06042025LML If True, use model to estimate FC, PWP,  Sat WC, and bulkdensity; Otherwise, use user inputs or from soil database
 
-bUseVB_initsoil = False                                                         #11252025 if true, use same approach with VB version; otherwise, use LML's version
-                                                                               #There are difference in: 1)to which layer the initial nitrate will be coped to lower layers
-                                                                               # 2) extend the bottom soil depth if total soil thickness less than 1.5 meter
-                                                                               # 3) the way the lower initial layers of soil water content were initialized with bottom initial layer 
+bUseVB_initsoil = True                                                         #11252025 if true, use same approach with VB version; otherwise, use LML's version
+                                                                               #LML: extend the bottom soil depth if total soil thickness less than 1.5 meter (if False)
 
 crop_growth_parameter_from_ISM = False
 weather_from_AgWeatherNet = False
@@ -1213,7 +1203,7 @@ while Days_Elapsed < (Number_Of_Days_To_Simulate + 1):
         Crop_Active = True
         Crop_Number = 1
         DAE = 1
-        InitializeCrop(DOY,pCropState,pSoilFlux,CropParamaters[1],pETState)
+        InitializeCrop(DOY,pCropState,pSoilFlux,CropParamaters[1],pETState,Crop_Number)
         #'Convert days of the year to days after emergence
         if CropGrowths[1].Emergence_DOY > CropGrowths[1].Maturity_DOY:
             DAE_At_Maturity = (365 - CropGrowths[1].Emergence_DOY) + CropGrowths[1].Maturity_DOY
@@ -1243,7 +1233,7 @@ while Days_Elapsed < (Number_Of_Days_To_Simulate + 1):
         Crop_Active = True
         Crop_Number = 2
         DAE = 1
-        InitializeCrop(DOY,pCropState,pSoilFlux,CropParamaters[2],pETState)
+        InitializeCrop(DOY,pCropState,pSoilFlux,CropParamaters[2],pETState,Crop_Number)
         #'Convert days of the year to days after emergence
         if CropGrowths[2].Emergence_DOY > CropGrowths[2].Maturity_DOY:
             DAE_At_Maturity = (365 - CropGrowths[2].Emergence_DOY) + CropGrowths[2].Maturity_DOY
@@ -1386,7 +1376,8 @@ while Days_Elapsed < (Number_Of_Days_To_Simulate + 1):
                            Water_Depth_To_Refill_fc,
                            Auto_Irrigation,
                            Recommended_N_Fertilization, 
-                           N_Fert_Recommended_Amount)
+                           N_Fert_Recommended_Amount,
+                           Crop_Number)
     
     #output managements
     if net_irrigation_today >= 1e-12 or fertilizer_today >=1e-12:
