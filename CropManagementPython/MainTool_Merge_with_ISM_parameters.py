@@ -645,6 +645,7 @@ def WriteCropSoilOutput(Crop_Number, DOY, DAE, SoilLayers, SoilOutputs,
         SoilOutRow[f'NH4-N (kg/ha) L{i}'] = pSoilState.Ammonium_N_Content[DOY][i] * 10000 #'Convert kg/m2 to kg/ha
     for i in range(1,7):
         SoilOutRow[f'Mineralized-N (kg/ha) L{i}'] = pSoilFlux.Layer_Mineralization[DOY][i] * 10000 #'Convert kg/m2 to kg/ha
+        SoilOutRow[f'SOC(kg/ha) L{i}'] = pSoilState.SOM_C_Pool[DOY][i] * 10000 #'Convert kg/m2 to kg/ha
     
     if Crop_Number != 0:
         SoilOutputs[Crop_Number].loc[len(SoilOutputs[Crop_Number])] = SoilOutRow
@@ -721,7 +722,7 @@ def WriteDailyWaterAndNitrogenBudgetTable(DailyBudgetOutputs, Crop_Number, DOY,
 
 #Main
 #get file
-data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_12052025'
+data_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/VBCode_12232025'
 output_path = '/home/liuming/mnt/hydronas3/Projects/CropManagement/test_results'
 crop_from_excel_csv = 'Crop_Parameters.csv'
 fieldinput_from_excel_csv = 'Field_Input.csv'
@@ -996,6 +997,7 @@ for i in range(1,SoilLayers + 1):
     SoilColums[f'NH4-N (kg/ha) L{i}'] = "float64"
 for i in range(1,7):
     SoilColums[f'Mineralized-N (kg/ha) L{i}'] = "float64"
+    SoilColums[f'SOC(kg/ha) L{i}'] = "float64"
     
 SoilOutputs = dict()
 for crop in range(1,Number_Of_Crops + 1):

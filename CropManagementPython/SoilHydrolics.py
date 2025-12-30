@@ -10,7 +10,7 @@ from AutoIrrigation import *
 #Soil Hydrologics
 Thickness_Model_Layers = 0.1
 Carbon_Fraction_In_SOM = 0.58
-SOC_C_N_Ratio = 12. #kg/kg
+#SOC_C_N_Ratio = 12. #kg/kg
 #MAX_Number_Model_Layers = 20                                                   #05192025LML hard coded maximum soil layers
 
 class SoilHorizons:
@@ -127,9 +127,11 @@ class SoilFlux:
     #Oxidation_Water_Function = dict() #((6) As Double
     #Oxidation_Temperature_Function = dict() #(6) As Double
     
-    Layer_SOC_Pool_Oxidation = 0.
-    Layer_Oxidized_SOM_C_Transfer_Back_To_SOM = 0.
-    Layer_Oxidized_SOM_N_Transferred_To_Ammonium = 0.
+    Layer_SOC_Pool_Oxidation = dict()
+    Layer_Oxidized_SOM_C_Transfer_Back_To_SOM = dict()
+    Layer_Oxidized_SOM_N_Transferred_To_Ammonium = dict()
+    Layer_N_Released_From_SOM_Oxidation = dict()
+    Layer_Oxidized_SOM_N_Transfer_Back_To_SOM = dict()
     
     Cumulative_Mineralization_Top_Three_Layers_All_Days = 0.0
     Cumulative_Mineralization_Next_Three_Layers_All_Days = 0.0
@@ -256,12 +258,16 @@ def InitSoilFlux(pSoilFlux):
         for k in range(1,3):
             pSoilFlux.N_Leaching_Accumulated_Crop[i][k] = 0.
             
-    pSoilFlux.Layer_Oxidized_SOM_C_Transfer_Back_To_SOM = 0.
-    pSoilFlux.Layer_Oxidized_SOM_N_Transferred_To_Ammonium = 0.
-    
     pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_All_Days = 0.0
     pSoilFlux.Cumulative_Mineralization_Next_Three_Layers_All_Days = 0.0
     pSoilFlux.Cumulative_Mineralization_All_Layers = 0.0
+    
+    for j in range(1,21):
+        pSoilFlux.Layer_SOC_Pool_Oxidation[j] = 0.0
+        pSoilFlux.Layer_Oxidized_SOM_C_Transfer_Back_To_SOM[j] = 0.0
+        pSoilFlux.Layer_Oxidized_SOM_N_Transferred_To_Ammonium[j] = 0.0
+        pSoilFlux.Layer_N_Released_From_SOM_Oxidation[j] = 0.0
+        pSoilFlux.Layer_Oxidized_SOM_N_Transfer_Back_To_SOM[j] = 0.0
     
     for i in range(1,3):
         pSoilFlux.Cumulative_Mineralization_Top_Three_Layers_Crop[i] = 0.
