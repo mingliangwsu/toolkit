@@ -18,9 +18,16 @@ def excel_cell_to_indices(cell_reference):
     row_index = int(row_str) - 1
     return row_index, col_index
 
-def get_excel_value(Cells, cell_reference):
+def is_blank_or_zero_or_nan(s):
+    strs = str(s).strip()
+    return strs == "" or strs == "0" or pd.isna(s)
+
+def get_excel_value(Cells, cell_reference, default = 0):
     row_index, col_index = excel_cell_to_indices(cell_reference)
-    return Cells.iloc[row_index, col_index]
+    cellv = Cells.iloc[row_index, col_index]
+    if is_blank_or_zero_or_nan(cellv):
+        return default
+    return cellv
 
 def get_excel_boolean(Cells, cell_reference):
     row_index, col_index = excel_cell_to_indices(cell_reference)
@@ -45,6 +52,3 @@ def get_cell_int(cellvalue,default = 0):
     else:
         return default
     
-def is_blank_or_zero_or_nan(s):
-    strs = str(s).strip()
-    return strs == "" or strs == "0" or pd.isna(s)

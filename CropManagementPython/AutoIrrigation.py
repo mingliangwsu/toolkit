@@ -11,21 +11,23 @@ from SoilHydrolics import *
 import pandas as pd
 
 class AutoIrrigationEvent:
-    DOY_Event = None
-    Event_Type = None
-    Scheduling_Method = None #1:PAW 2:CWSI
-    Maximum_Allowable_PAW_Depletion = None
-    Maximum_Allowable_CWSI = None
-    Refill_Depth = None #meter
-    Irrigated_Crop_Number = None
-    
-    DOY_To_Start_Auto_Irrigation = None
-    DOY_To_Stop_Auto_Irrigation = None
-    DOY_For_Refill_Irrigation = None
+    def __init__(self):
+        self.DOY_Event = None
+        self.Event_Type = None
+        self.Scheduling_Method = None #1:PAW 2:CWSI
+        self.Maximum_Allowable_PAW_Depletion = None
+        self.Maximum_Allowable_CWSI = None
+        self.Refill_Depth = None #meter
+        self.Irrigated_Crop_Number = None
+        
+        self.DOY_To_Start_Auto_Irrigation = None
+        self.DOY_To_Stop_Auto_Irrigation = None
+        self.DOY_For_Refill_Irrigation = None
     
 class AutoIrrigationEvents:
-    Number_Of_Auto_Entries = 0
-    Events = dict()
+    def __init__(self):
+        self.Number_Of_Auto_Entries = 0
+        self.Events = dict()
 
 def ReadAutoIrrigation(Cells,AutoIrrigation,DOY_Last_Scheduled_Irrigation,
                        Emergence_DOY_1,Maturity_DOY_1,Emergence_DOY_2,Maturity_DOY_2):
