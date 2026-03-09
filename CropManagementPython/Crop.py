@@ -317,47 +317,47 @@ def NitrogenUptake(DOY, pCropState, pCropParameter, pCropGrowth, pETState, pSoil
         
     return Today_Crop_N_Demand,Available_N, Today_N_Uptake
 
-def FertilizerRecommendation(Preplant, DOY, DAE, Crop_Number, pCropState, pCropParameter, 
+def FertilizerRecommendation(Premergence, DOY, DAE, Crop_Number, pCropState, pCropParameter, 
                              pCropGrowth, pETState, pSoilModelLayer, pSoilState, 
                              Scheduled_Fertilization, pCS_Fertilization, 
                              Potential_Biomass_At_Maturity, Auto_Fertilization, 
                              Auto_Fertilization_Parameter, DAE_When_Crop_Ends):
-    Actual_DOY = 0
     Kd = 0.00005 #'1/day
     CN_Ratio = 10. 
     
     Auto_Fert = False
-    Actual_DOY = 0
+    #Actual_DOY = 0
     #'Account for events before emergence
     Recommended_N_Fertilization = False
     Nitrate_N_Recommended = 0.
-    if Preplant:
+    Number_Of_Days_In_Scheduling_Window = 0
+    if Premergence:
     #'Account for events before emergence
         if DOY == Auto_Fertilization_Parameter.Auto_Fert_Split_DOYs[1]:
             Days_before_emergence = pCropGrowth.Emergence_DOY - DOY
             if Days_before_emergence < 0:
                 Days_before_emergence += 365
             Fraction_Of_Total_N_Rate = Auto_Fertilization_Parameter.Auto_Fert_Split_Percents[1] / 100.
-            Scheduling_Window_Days = DAE_When_Crop_Ends + Days_before_emergence
+            Number_Of_Days_In_Scheduling_Window = DAE_When_Crop_Ends + Days_before_emergence
             Auto_Fert = True
     else:
         for split in [1,2,3]:
             if DOY == Auto_Fertilization_Parameter.Auto_Fert_Split_DOYs[split]:
                 Fraction_Of_Total_N_Rate = Auto_Fertilization_Parameter.Auto_Fert_Split_Percents[split] / 100.
-                Scheduling_Window_Days = DAE_When_Crop_Ends - DAE   #'Mingliang 01/23/2026
+                Number_Of_Days_In_Scheduling_Window = DAE_When_Crop_Ends - DAE   #'Mingliang 01/23/2026
                 Auto_Fert = True
     if Auto_Fert:    
         #'Estimation of mineralization
         Estimated_Mineralization = 0.
         for Layer in range(1,7):  #'Top six soil layers used to estimate mineralization
             SOC =  pSoilState.Soil_Organic_Carbon[DOY][Layer]
-            Estimated_Mineralization += (SOC * Kd / CN_Ratio) * Scheduling_Window_Days #'kg/m2
+            Estimated_Mineralization += (SOC * Kd / CN_Ratio) * Number_Of_Days_In_Scheduling_Window #'kg/m2
         
         #'Determine if N fertilization is scheduled in the future
         Next_Week_Scheduled_Fertilization = False
         Scheduled_Fertilization_Amount = 0.
         Days_Counter = 1
-        while Days_Counter <= Scheduling_Window_Days:
+        while Days_Counter <= Number_Of_Days_In_Scheduling_Window:
             C_DOY = Days_Counter + DOY - 1
             t_nitrate = 0. 
             t_ammonium = 0.
@@ -393,12 +393,8 @@ def FertilizerRecommendation(Preplant, DOY, DAE, Crop_Number, pCropState, pCropP
         if Nitrate_N_Recommended < 0.002: Nitrate_N_Recommended = 0.002   #'This is to ensure that N recommendation is at least 20 kg/ha
         if Nitrate_N_Recommended > 0.: 
             Recommended_N_Fertilization = True
-            if Actual_DOY > 0:
-                pCropState.N_Fert_Recommended_DOY[Actual_DOY] = Actual_DOY
-                pCropState.N_Fert_Recommended_Amount[Actual_DOY] = Nitrate_N_Recommended
-            else:
-                pCropState.N_Fert_Recommended_DOY[DOY] = DOY
-                pCropState.N_Fert_Recommended_Amount[DOY] = Nitrate_N_Recommended
+            pCropState.N_Fert_Recommended_DOY[DOY] = DOY
+            pCropState.N_Fert_Recommended_Amount[DOY] = Nitrate_N_Recommended
     pCropState.Recommended_N_Fertilization = Recommended_N_Fertilization
     return Recommended_N_Fertilization, Nitrate_N_Recommended
 
