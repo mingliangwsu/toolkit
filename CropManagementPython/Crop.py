@@ -390,7 +390,7 @@ def FertilizerRecommendation(Premergence, DOY, DAE, Crop_Number, pCropState, pCr
         #'Apply the use efficiency of N fertilization, accounting for losses due to leaching or gaseous forms, and N below the region with significant root fraction
         Nitrate_N_Recommended *= Fraction_Of_Total_N_Rate / 0.8 #'Use efficiency of N fertilization, accounting for losses due to leaching or gaseous forms, and N below
         
-        if Nitrate_N_Recommended < 0.002: Nitrate_N_Recommended = 0.002   #'This is to ensure that N recommendation is at least 20 kg/ha
+        if Nitrate_N_Recommended > 0.0 and Nitrate_N_Recommended < 0.002: Nitrate_N_Recommended = 0.002   #'This is to ensure that N recommendation is at least 20 kg/ha Min: add negative condition for high soil N
         if Nitrate_N_Recommended > 0.: 
             Recommended_N_Fertilization = True
             pCropState.N_Fert_Recommended_DOY[DOY] = DOY
