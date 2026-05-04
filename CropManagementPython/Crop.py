@@ -341,8 +341,7 @@ def FertilizerRecommendation(Premergence, DOY, DAE, Crop_Number, pCropState, pCr
             Number_Of_Days_In_Scheduling_Window = (365 - DOY) + pCropGrowth.Beging_Senescence_DOY
         else:
             Number_Of_Days_In_Scheduling_Window = pCropGrowth.Beging_Senescence_DOY - DOY
-
-        Auto_Fert = True
+        if Auto_Fertilization and Premergence == False: Auto_Fert = True   #5/4/2026LML recover the older auto-fertilization set up, i.e. oonly happens after emergence
     
     if Premergence:
     #'Account for events before emergence
