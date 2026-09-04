@@ -7,22 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/18DVip-kWK26HXj7dN-OBfqN9DXXwr9sP
 """
 
-from google.colab import drive
-drive.mount('/content/drive', force_remount=True)
-
-# Cell 1 — imports debug
-if False:
-  import pandas as pd
-  import os
-
-  data_dir = '/content/drive/MyDrive/Projects/VIC_CropSyst_Sims/WarmRuns/testdata'
-  STATE_CSV = f"{data_dir}/branch_point_19850710_crop.csv"
-  VEGPARAM  = f"{data_dir}/vegparam.txt"
-  ORIG_ROTATION_PATH = f"{data_dir}/original_rotations/Code"
-  UPDATED_ROTATION_PATH = f"{data_dir}/updated_rotations/Code"
-
-  os.makedirs(UPDATED_ROTATION_PATH, exist_ok=True)
-
 # Cell 1 — imports and configurable paths
 import os
 import re
@@ -34,16 +18,16 @@ import pandas as pd
 
 parser = argparse.ArgumentParser(description="Generate updated CS_rotation files for a warm-restart run.")
 parser.add_argument("--state_csv", type=str,
-                     default="/content/drive/MyDrive/Projects/VIC_CropSyst_Sims/WarmRuns/testdata/branch_point_19850710_crop.csv",
+                     default="",
                      help="Path to the state-output CSV (e.g. branch_point_19850710_crop.csv)")
 parser.add_argument("--vegparam", type=str,
-                     default="/content/drive/MyDrive/Projects/VIC_CropSyst_Sims/WarmRuns/testdata/vegparam.txt",
+                     default="",
                      help="Path to vegparam.txt")
 parser.add_argument("--orig_rotation_path", type=str,
-                     default="/content/drive/MyDrive/Projects/VIC_CropSyst_Sims/WarmRuns/testdata/original_rotations/Code",
+                     default="",
                      help="Directory containing the original .CS_rotation files")
 parser.add_argument("--updated_rotation_path", type=str,
-                     default="/content/drive/MyDrive/Projects/VIC_CropSyst_Sims/WarmRuns/testdata/updated_rotations/Code",
+                     default="",
                      help="Output directory for the updated .CS_rotation files")
 
 # parse_known_args() ignores Colab's own injected argv (e.g. -f kernel.json),
